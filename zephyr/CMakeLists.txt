@@ -26,7 +26,6 @@ endif()
 zephyr_interface_library_named(MRUBYC_API)
 target_include_directories(MRUBYC_API INTERFACE "${runtime_dir}" "${hal_dir}")
 target_compile_definitions(MRUBYC_API INTERFACE
-  $<$<BOOL:${CONFIG_MRUBYC_ALLOC_LIBC}>:MRBC_ALLOC_LIBC=1>
   $<$<BOOL:${CONFIG_MRUBYC_ALLOC_PROFILING}>:MRBC_USE_ALLOC_PROF=1>
   MAX_VM_COUNT=${CONFIG_MRUBYC_MAX_VM_COUNT}
   MAX_REGS_SIZE=${CONFIG_MRUBYC_MAX_REGS_SIZE}

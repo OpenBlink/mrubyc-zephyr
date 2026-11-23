@@ -13,17 +13,8 @@ config APP_LINK_WITH_MRUBYC_API
 	bool
 	default y
 
-config MRUBYC_ALLOC_LIBC
-	bool "Use the C library allocator"
-	depends on EXTERNAL_LIBC || NEWLIB_LIBC || (COMMON_LIBC_MALLOC && COMMON_LIBC_MALLOC_ARENA_SIZE != 0)
-	help
-	  Use malloc, realloc, and free instead of the mruby/c memory pool.
-	  Size the C library heap for the application and call mrbc_init()
-	  with NULL and zero. The mruby/c pool statistics API is unavailable.
-
 config MRUBYC_ALLOC_PROFILING
 	bool "Memory pool profiling"
-	depends on !MRUBYC_ALLOC_LIBC
 	help
 	  Enable the mrbc_alloc_*_profiling() API. While profiling is active,
 	  the allocator scans the pool on allocation and release.

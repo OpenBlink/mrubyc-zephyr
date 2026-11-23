@@ -37,8 +37,7 @@ BUILD_ASSERT(MRBC_SCHEDULER_EXIT == IS_ENABLED(CONFIG_MRUBYC_SCHEDULER_EXIT));
 #if defined(MRBC_SUPPORT_OP_EXT) != defined(CONFIG_MRUBYC_SUPPORT_OP_EXT)
 #error "The application and mruby/c disagree on extended operands"
 #endif
-#if defined(MRBC_ALLOC_LIBC) != defined(CONFIG_MRUBYC_ALLOC_LIBC) || \
-	defined(MRBC_USE_ALLOC_PROF) != defined(CONFIG_MRUBYC_ALLOC_PROFILING) || \
+#if defined(MRBC_USE_ALLOC_PROF) != defined(CONFIG_MRUBYC_ALLOC_PROFILING) || \
 	defined(MRBC_NAN_BOXING) != defined(CONFIG_MRUBYC_NAN_BOXING)
 #error "The application and mruby/c disagree on memory configuration"
 #endif
@@ -62,23 +61,14 @@ BUILD_ASSERT(MRBC_SCHEDULER_EXIT == 1 && !IS_ENABLED(CONFIG_MRUBYC_SYMBOL_SEARCH
 BUILD_ASSERT(MRBC_SUPPORT_OP_EXT == 1);
 BUILD_ASSERT(MRBC_KV_SIZE_INIT == 2 && MRBC_KV_SIZE_INCREMENT == 5);
 BUILD_ASSERT(sizeof(MRBC_STRING_SIZE_T) == sizeof(uint16_t));
-#if defined(MRBC_INT64) || defined(MRBC_ALLOC_LIBC) || defined(MRBC_USE_ALLOC_PROF) || \
+#if defined(MRBC_INT64) || defined(MRBC_USE_ALLOC_PROF) || \
 	defined(MRBC_NAN_BOXING) || defined(MRBC_NO_STDIO) || defined(MRBC_CONVERT_CRLF) || \
 	defined(MRBC_DEBUG_REGS) || !defined(GET_INT_ARG)
 #error "Unexpected upstream defaults"
 #endif
 #endif
 
-static void init_runtime(void)
-{
-#ifdef CONFIG_MRUBYC_ALLOC_LIBC
-	mrbc_init(NULL, 0);
-#else
-	static _Alignas(8) uint8_t pool[32 * 1024];
-
-	mrbc_init(pool, sizeof(pool));
-#endif
-}
+static _Alignas(8) uint8_t pool[32 * 1024];
 
 static void check_timer_result(void)
 {
@@ -173,18 +163,11 @@ static void check_optional_features(void)
 	zassert_equal(profile.min, profile.initial);
 #endif
 
-#if defined(CONFIG_BOARD_NATIVE_SIM) && defined(CONFIG_MRUBYC_ALLOC_LIBC) && \
-	defined(CONFIG_MRUBYC_STRING_SIZE_32BIT)
-	mrbc_value string = mrbc_string_new(NULL, NULL, UINT16_MAX + 1);
-
-	zassert_equal(mrbc_string_size(&string), UINT16_MAX + 1);
-	mrbc_decref(&string);
-#endif
 }
 
 ZTEST(mrubyc, test_loader_timer_and_extended_operands)
 {
-	init_runtime();
+	mrbc_init(pool, sizeof(pool));
 	zassert_is_null(mrbc_create_task(rite0300_mrb, NULL),
 			"The RITE0400 runtime must reject bytecode from v3.4.1");
 	check_instance_release();
@@ -249,7 +232,7 @@ static void run_scheduler(void *unused1, void *unused2, void *unused3)
 	ARG_UNUSED(unused2);
 	ARG_UNUSED(unused3);
 
-	init_runtime();
+	mrbc_init(pool, sizeof(pool));
 	if (mrbc_create_task(timer_mrb, NULL) != NULL) {
 		mrbc_run();
 	}

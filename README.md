@@ -4,7 +4,7 @@
 
 Run Ruby bytecode in a Zephyr application using [mruby/c](https://github.com/mrubyc/mrubyc).
 The module builds mruby/c with a Zephyr HAL for scheduler timing and console output.
-Your application initializes the runtime and starts the Ruby tasks.
+Your application provides the memory pool and starts the Ruby tasks.
 
 | Module release | mruby/c release | Host compiler | Bytecode |
 | --- | --- | --- | --- |
@@ -151,7 +151,6 @@ firmware.
 | Kconfig option | Default | Purpose |
 | --- | --- | --- |
 | `CONFIG_MRUBYC` | `n` | Build the module. |
-| `CONFIG_MRUBYC_ALLOC_LIBC` | `n` | Allocate VM objects from the C library heap. |
 | `CONFIG_MRUBYC_ALLOC_PROFILING` | `n` | Enable the pool allocator's `mrbc_alloc_*_profiling()` API. |
 | `CONFIG_MRUBYC_MAX_VM_COUNT` | `5` | Maximum number of VM instances. |
 | `CONFIG_MRUBYC_MAX_REGS_SIZE` | `110` | Default register capacity per VM. |
@@ -182,10 +181,6 @@ Extended operands are enabled by default. The other runtime options use
 mruby/c and Zephyr HAL defaults, including the pool allocator and the periodic
 Zephyr timer.
 
-- With the C library allocator, size the libc heap for the application and
-  initialize the runtime once with `mrbc_init(NULL, 0)`. In this mode
-  `mrbc_cleanup()` does not reclaim persistent allocations such as dynamic
-  symbols. The mruby/c pool statistics and profiling APIs are unavailable.
 - The time slice is the timer period multiplied by the tick count. Use
   a period that is an exact multiple of the Zephyr system clock tick.
 - The sample scripts use `puts`. Update scripts that call console methods
@@ -206,6 +201,8 @@ fatal-error hooks remain C macros. The module targets little-endian boards and
 derives bytecode alignment requirements from the Zephyr configuration.
 The module uses the periodic timer because the upstream software scheduler
 can ignore `Task.pass` and lose preemption after a rescued exception.
+The module uses the pool allocator because upstream `String#clear` assumes
+that shrinking a buffer keeps its address.
 
 ## Tests and contributions
 
