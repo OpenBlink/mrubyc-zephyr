@@ -209,7 +209,7 @@ Zephyr timer.
 | --- | --- |
 | `MRBC_USE_FLOAT`, `MRBC_USE_STRING` | Float precision is selectable. Disabling Float causes compilation errors and disabling String causes link errors in the official 4.0.0 sources. |
 | `MRBC_INT16` | The module supports 32-bit or 64-bit integers. The 16-bit mode breaks upstream variadic integer formatting. |
-| `MRBC_ALLOC_16BIT`, `MRBC_ALLOC_24BIT` | The pool uses 24-bit block sizes. The 16-bit headers can misalign objects on 32-bit targets. |
+| `MRBC_ALLOC_16BIT`, `MRBC_ALLOC_24BIT` | The pool uses upstream's `MRBC_ALLOC_24BIT` mode, with 32-bit headers when VM-ID tracking is off. The 16-bit headers can misalign objects on 32-bit targets. |
 | `MRBC_ALLOC_LIBC` | The pool allocator is used because upstream `String#clear` assumes shrinking a buffer keeps its address. |
 | `MRBC_ALLOC_VMID` | Upstream VM-ID tracking fails to compile with the official 4.0.0 sources. |
 | `MRBC_STRING_SIZE_T` | The String length field remains 16-bit. Wider lengths can exceed the limits of `String#bytes` and exception message storage. |
