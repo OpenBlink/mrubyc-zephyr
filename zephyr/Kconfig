@@ -178,4 +178,20 @@ config MRUBYC_SCHEDULER_EXIT
 	  Return when there are no runnable, waiting, or suspended Ruby
 	  tasks. Disable to keep the scheduler thread idle in that state.
 
+menu "Unavailable modes and fixed settings in mruby/c 4.0.0"
+
+comment "Disable Float (MRBC_USE_FLOAT=0)"
+comment "Disable String (MRBC_USE_STRING=0)"
+comment "String length (MRBC_STRING_SIZE_T): fixed at 16 bits"
+comment "16-bit integers (MRBC_INT16)"
+comment "NaN boxing (MRBC_NAN_BOXING)"
+comment "Pool format (MRBC_ALLOC_24BIT): fixed"
+comment "16-bit pool (MRBC_ALLOC_16BIT)"
+comment "libc allocator (MRBC_ALLOC_LIBC)"
+comment "Allocator VM ID tracking (MRBC_ALLOC_VMID)"
+comment "Software ticks (MRBC_NO_TIMER)"
+comment "Byte order (MRBC_LITTLE_ENDIAN): fixed, MRBC_BIG_ENDIAN unavailable"
+
+endmenu
+
 endif # MRUBYC

@@ -207,6 +207,9 @@ Zephyr timer.
 
 ### Upstream options with fixed or derived values
 
+The mruby/c menu in `menuconfig` lists unavailable modes and fixed settings
+as read-only entries. The table explains their current behavior.
+
 | Upstream option | Zephyr behavior |
 | --- | --- |
 | `MRBC_USE_FLOAT` | Choose single or double precision. `MRBC_USE_FLOAT=0` fails to compile with the official 4.0.0 sources. |
@@ -224,13 +227,27 @@ Zephyr timer.
 | `MRBC_SYMBOL_SEARCH_BTREE`, `MRBC_TICK_UNIT_{1,2,4,10}_MS` | The linear-lookup switch selects the alternative to the default binary tree. The timer period is configurable directly in milliseconds. |
 | `MRBC_BUILTIN_SYMBOL_MAX` | The upstream generated symbol table determines this value. Kconfig controls dynamic symbol capacity separately. |
 
-When updating to the next official mruby/c release, verify that it includes the
-[upstream Float-disabled build fix](https://github.com/mrubyc/mrubyc/pull/293).
-Add `MRBC_USE_FLOAT=0` to the Kconfig Float choice as part of that update and
-make the Math option depend on Float being enabled. Keep double precision as
-the default. A Float-disabled build from upstream `master` ran the Hello
-sample on `native_sim` and `qemu_cortex_m3` with Math disabled. Repeat the
-build and smoke test on both targets against the official release archive.
+### Float and String in the next official mruby/c release
+
+- Add `MRBC_USE_FLOAT=0` to the Kconfig Float choice once the official
+  archive includes the
+  [upstream Float-disabled build fix](https://github.com/mrubyc/mrubyc/pull/293).
+  Keep double precision as the default and require Float for Math. A
+  Float-disabled build from upstream `master` ran the Hello sample on
+  `native_sim` and `qemu_cortex_m3` with Math disabled.
+- Add a String switch for `MRBC_USE_STRING=0` with String enabled by default.
+  Require String for UTF-8 indexing and Unicode case conversion. Upstream
+  `master` includes the
+  [String-disabled link fix](https://github.com/mrubyc/mrubyc/pull/294).
+  Its embedded Ruby library still raises an exception at startup when it
+  evaluates a string literal.
+  Verify that the official archive links and initializes the embedded
+  library without exceptions in the String-disabled configuration.
+
+Against the official archive, build and run a smoke test for each disabled
+mode on `native_sim` and `qemu_cortex_m3`. Use a Ruby script without
+string literals for the String-disabled test and check that it runs to
+completion after clean initialization.
 
 ## Tests and contributions
 
