@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.20.0)
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(mrubyc_integration)
+
+include("${ZEPHYR_MRUBYC_MODULE_DIR}/cmake/mrubyc.cmake")
+target_sources(app PRIVATE main.c)
+if(EXPECT_DEFAULTS)
+  target_compile_definitions(app PRIVATE EXPECT_DEFAULTS=1)
+endif()
+mrubyc_embed_script(app timer_mrb "timer test.rb")
+
+# Distinct literals force mrbc to emit extended operands for indices above 255.
+set(extended_script "${CMAKE_CURRENT_BINARY_DIR}/extended.rb")
+set(extended_source "")
+foreach(index RANGE 0 259)
+  string(APPEND extended_source "\"literal ${index}\".to_s\n")
+endforeach()
+string(APPEND extended_source "$extended_result = \"extension worked\"\n")
+file(CONFIGURE OUTPUT "${extended_script}" CONTENT "${extended_source}" @ONLY)
+mrubyc_embed_script(app extended_mrb "${extended_script}")

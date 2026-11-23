@@ -1,0 +1,11 @@
+manifest:
+  projects:
+    - name: zephyr
+      url: https://github.com/zephyrproject-rtos/zephyr
+      revision: v3.7.2
+      clone-depth: 1
+      import:
+        name-allowlist:
+          - cmsis
+  self:
+    path: modules/lib/mrubyc-zephyr

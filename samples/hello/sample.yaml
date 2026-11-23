@@ -1,0 +1,13 @@
+sample:
+  name: mruby/c Hello World
+tests:
+  sample.mrubyc.hello:
+    tags: mrubyc
+    platform_allow: [native_sim, qemu_cortex_m3]
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - 'Hello from mruby/c on Zephyr!'
+        - 'mruby/c finished'
