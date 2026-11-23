@@ -118,6 +118,9 @@ mrubyc_embed_script(app app_mrb app.rb)
 The helper accepts Ruby source and generates `app_mrb.h` in the build directory.
 Use a distinct C identifier for each bytecode array linked into your application.
 
+See the [mruby/c application guide](docs/ruby-guide.md) for examples of
+handling input, using collections, scheduling tasks, and exposing a C method.
+
 ## Memory footprint (ROM and RAM)
 
 The upstream mruby/c 4.0.0 README lists RAM usage as **< 40 KB** in its
@@ -214,17 +217,24 @@ firmware.
 
 ## Configuration
 
+Set application options in `prj.conf` or select them with
+`west build -d <build-dir> -t menuconfig`. Check the resolved values in
+`<build-dir>/zephyr/.config`, especially when an option has dependencies.
+The runtime requires `MULTITHREADING` and `SYS_CLOCK_EXISTS` with `SMP`,
+`BIG_ENDIAN`, and `64BIT` disabled.
+
 | Kconfig option | Default | Purpose |
 | --- | --- | --- |
 | `CONFIG_MRUBYC` | `n` | Build the module. |
 | `CONFIG_MRUBYC_ALLOC_PROFILING` | `n` | Enable the pool allocator's `mrbc_alloc_*_profiling()` API. |
 | `CONFIG_MRUBYC_OOM_POOL_STATS` | `n` | Print pool usage before the existing kernel panic on allocation failure. Requires `CONFIG_PRINTK=y`. |
-| `CONFIG_MRUBYC_MAX_VM_COUNT` | `5` | Maximum number of VM instances. |
-| `CONFIG_MRUBYC_MAX_REGS_SIZE` | `110` | Default register capacity per VM. |
-| `CONFIG_MRUBYC_MAX_SYMBOLS_COUNT` | `255` | Dynamic symbol table capacity. |
+| `CONFIG_MRUBYC_MAX_VM_COUNT` | `5` | Maximum number of VM instances (1–255). |
+| `CONFIG_MRUBYC_MAX_REGS_SIZE` | `110` | Default register capacity per VM (32–65535). |
+| `CONFIG_MRUBYC_MAX_SYMBOLS_COUNT` | `255` | Dynamic symbol table capacity (32–32512). |
 | `CONFIG_MRUBYC_SYMBOL_SEARCH_LINEAR` | `n` | Use a smaller linear lookup table for dynamic symbols. The default uses a binary tree. |
-| `CONFIG_MRUBYC_FLOAT_{SINGLE,DOUBLE}` | `DOUBLE` | Float representation. |
-| `CONFIG_MRUBYC_USE_MATH` | `n` | Enable the Math module with Float and a C library that provides its math functions. |
+| `CONFIG_MRUBYC_FLOAT_SINGLE` | `n` | Select single precision in the `MRUBYC_FLOAT` choice. |
+| `CONFIG_MRUBYC_FLOAT_DOUBLE` | `y` | Select double precision in the `MRUBYC_FLOAT` choice. |
+| `CONFIG_MRUBYC_USE_MATH` | `n` | Enable Math with `NATIVE_LIBC`, `PICOLIBC`, `NEWLIB_LIBC`, or `EXTERNAL_LIBC`. An external C library must provide libm. |
 | `CONFIG_MRUBYC_USE_STRING_UTF8` | `n` | Use UTF-8 character indexing in supported String methods. |
 | `CONFIG_MRUBYC_USE_UNICODE_CASE` | `n` | Add Unicode BMP case conversion when UTF-8 is enabled. |
 | `CONFIG_MRUBYC_INT64` | `n` | Use 64-bit Ruby integers. |
@@ -246,6 +256,13 @@ firmware.
 Extended operands are enabled by default. The other runtime options use
 mruby/c and Zephyr HAL defaults, including the pool allocator and the periodic
 Zephyr timer.
+
+`CONFIG_APP_LINK_WITH_MRUBYC_API` is an internal symbol with no prompt. It is
+enabled when the module is enabled and attaches the `MRUBYC_API` interface
+to the Zephyr application target. Additional libraries link it explicitly
+as described below. See [Kconfig](zephyr/Kconfig) and the
+[Zephyr CMake integration](zephyr/CMakeLists.txt) for the declarations and
+their mapping to the runtime.
 
 - The time slice is the timer period multiplied by the tick count. Use
   a period that is an exact multiple of the Zephyr system clock tick.
