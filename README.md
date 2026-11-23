@@ -146,12 +146,14 @@ layout differences. The RAM totals include allocated stacks and the full
 pool reservation. Measure pool use under your application's workload with
 `mrbc_alloc_statistics()` or `CONFIG_MRUBYC_ALLOC_PROFILING`.
 
-In the west workspace, build Hello and use the Zephyr reports to inspect
-individual symbols. Read the region totals in the final link output and the
-symbol breakdown in the reports.
+In the west workspace, set the path to your Zephyr SDK 0.16.9 installation
+and build Hello. Read the region totals in the final link output and use
+the Zephyr reports to inspect individual symbols.
 
 ~~~sh
-west build -b qemu_cortex_m3 -d build/footprint-hello \
+export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+export ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk-0.16.9
+west build -p always -b qemu_cortex_m3 -d build/footprint-hello \
   modules/lib/mrubyc-zephyr/samples/hello
 west build -d build/footprint-hello -t rom_report
 west build -d build/footprint-hello -t ram_report
