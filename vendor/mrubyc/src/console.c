@@ -3,8 +3,9 @@
   console output module. (not yet input)
 
   <pre>
-  Copyright (C) 2015- Kyushu Institute of Technology.
-  Copyright (C) 2015- Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -128,13 +129,13 @@ void mrbc_putchar(char c)
 #if defined(MRBC_CONVERT_CRLF)
   static const char CRLF[2] = "\r\n";
   if( c == '\n' ) {
-    hal_write(1, CRLF, 2);
+    mrbc_hal_write(1, CRLF, 2);
   } else {
-    hal_write(1, &c, 1);
+    mrbc_hal_write(1, &c, 1);
   }
 
 #else
-    hal_write(1, &c, 1);
+    mrbc_hal_write(1, &c, 1);
 #endif
 }
 
@@ -177,17 +178,17 @@ void mrbc_nprint(const char *str, int size)
 
   for( int i = 0; i < size; i++ ) {
     if( *p1++ == '\n' ) {
-      hal_write(1, p2, p1 - p2 - 1);
-      hal_write(1, CRLF, 2);
+      mrbc_hal_write(1, p2, p1 - p2 - 1);
+      mrbc_hal_write(1, CRLF, 2);
       p2 = p1;
     }
   }
   if( p1 != p2 ) {
-    hal_write(1, p2, p1 - p2);
+    mrbc_hal_write(1, p2, p1 - p2);
   }
 
 #else
-  hal_write(1, str, size);
+  mrbc_hal_write(1, str, size);
 #endif
 }
 
@@ -348,40 +349,39 @@ void mrbc_p(const mrbc_value *v)
 //================================================================
 /*! convert char to string (escape sequence)
 
-  @param  buf		output buffer. (5bytes at least)
-  @param  ch		character.
+  @param  buf	output buffer. (5bytes at least)
+  @param  src	pointer to input char.
 */
-void mrbc_char_to_s( char *buf, char ch )
+void mrbc_char_to_s( char *buf, const void *src )
 {
-  unsigned char uch = ch;
-  char ch1;
+  unsigned char ch = *((unsigned char *)src);
 
-  if( uch == 0x7f ) goto hex;
-  if( uch < ' ' ) {
-    ch1 = "\0\0\0\0\0\0\0abtnvfr\0\0\0\0\0\0\0\0\0\0\0\0\0e\0\0\0"[ uch ];
+  if( ch == 0x7f ) goto hex;
+  if( ch < ' ' ) {
+    char ch1 = "\0\0\0\0\0\0\0abtnvfr\0\0\0\0\0\0\0\0\0\0\0\0\0e\0\0\0"[ ch ];
     if( ch1 == 0 ) goto hex;
+    ch = ch1;
     goto esc;
   }
-  if( uch == '"' || uch == '#' || uch == '\\' ) {
-    ch1 = uch;
+  if( ch == '"' || ch == '\\' ) {
     goto esc;
   }
 
-  buf[0] = uch;
+  buf[0] = ch;
   buf[1] = 0;
   return;
 
  hex:
   buf[0] = '\\';
   buf[1] = 'x';
-  buf[2] = "0123456789ABCDEF"[uch >> 4];
-  buf[3] = "0123456789ABCDEF"[uch & 0x0f];
+  buf[2] = "0123456789ABCDEF"[ch >> 4];
+  buf[3] = "0123456789ABCDEF"[ch & 0x0f];
   buf[4] = 0;
   return;
 
  esc:
   buf[0] = '\\';
-  buf[1] = ch1;
+  buf[1] = ch;
   buf[2] = 0;
 }
 
@@ -420,7 +420,7 @@ int mrbc_p_sub(const mrbc_value *v)
       unsigned char uch = (unsigned char)s[i];
       if( uch < 0x80 ) {
         char buf[10];
-        mrbc_char_to_s( buf, s[i] );
+        mrbc_char_to_s( buf, s + i );
         mrbc_print( buf );
         i++;
       } else {
@@ -448,7 +448,7 @@ int mrbc_p_sub(const mrbc_value *v)
 #else
     for( int i = 0; i < size; i++ ) {
       char buf[10];
-      mrbc_char_to_s( buf, s[i] );
+      mrbc_char_to_s( buf, s + i );
       mrbc_print( buf );
     }
 #endif

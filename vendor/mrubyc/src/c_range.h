@@ -3,8 +3,9 @@
   mruby/c Range class
 
   <pre>
-  Copyright (C) 2015- Kyushu Institute of Technology.
-  Copyright (C) 2015- Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -22,6 +23,7 @@
 
 /***** Local headers ********************************************************/
 #include "value.h"
+#include "vm.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +52,7 @@ typedef struct RRange {
 /***** Global variables *****************************************************/
 /***** Function prototypes **************************************************/
 //@cond
-mrbc_value mrbc_range_new(struct VM *vm, mrbc_value *first, mrbc_value *last, int flag_exclude);
+mrbc_value mrbc_range_new(mrbc_vm *vm, mrbc_value *first, mrbc_value *last, int flag_exclude);
 void mrbc_range_delete(mrbc_value *v);
 void mrbc_range_clear_vm_id(mrbc_value *v);
 int mrbc_range_compare(const mrbc_value *v1, const mrbc_value *v2);
