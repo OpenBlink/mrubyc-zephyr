@@ -1,6 +1,10 @@
 # Writing mruby/c applications on Zephyr
 
-These examples target the bundled mruby/c 4.0.0 runtime and mrbc 4.0.0.
+These examples target the bundled mruby/c 4.0.0 runtime. Build mrbc 4.0.0
+using the [host compiler instructions](../README.md#run-your-own-ruby-code),
+add the directory containing `mrbc` to your `PATH`, and confirm the
+version with `mrbc --version`.
+
 From the west workspace in the [Hello quick start](../README.md#run-a-sample),
 copy the sample and save one example in the copy as `hello.rb`. The sample
 configuration enables mruby/c and Zephyr console output. To work from an
