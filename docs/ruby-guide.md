@@ -4,8 +4,7 @@ These examples target the bundled mruby/c 4.0.0 runtime and mrbc 4.0.0.
 From the west workspace in the [Hello quick start](../README.md#run-a-sample),
 copy the sample and save one example in the copy as `hello.rb`. The sample
 configuration enables mruby/c and Zephyr console output. To work from an
-unreleased revision, use its branch or commit in the `west init --mr`
-argument and check the compiler version with `mrbc --version`.
+unreleased branch, pass its name to `west init --mr`.
 
 ```sh
 cp -R modules/lib/mrubyc-zephyr/samples/hello ruby-recipe
