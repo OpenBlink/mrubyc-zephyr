@@ -11,6 +11,7 @@ tests:
       type: multi_line
       regex:
         - 'Fatal error: Out of memory\.'
+        - 'Pool statistics printed: no'
         - 'Caught Zephyr kernel panic'
   mrubyc.fatal_hooks.oom_pool_stats:
     extra_args: TRIGGER_OOM=ON
@@ -22,6 +23,7 @@ tests:
       regex:
         - 'mruby/c pool: total=16384 used=[0-9]+ free=[0-9]+ bytes'
         - 'Fatal error: Out of memory\.'
+        - 'Pool statistics printed: yes'
         - 'Caught Zephyr kernel panic'
   mrubyc.fatal_hooks.exception_default:
     harness_config:

@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <mrubyc.h>
+#include <stdarg.h>
+#include <string.h>
 #include <zephyr/fatal.h>
 #include <zephyr/sys/printk.h>
 
@@ -15,11 +17,32 @@
 #include "dynamic_task_mrb.h"
 #endif
 
+#ifdef TRIGGER_OOM
+static bool saw_pool_stats;
+
+/* Observe pool diagnostics so the default test can check their absence. */
+void __wrap_printk(const char *format, ...)
+{
+	va_list args;
+	static const char prefix[] = "mruby/c pool: ";
+
+	if (strncmp(format, prefix, sizeof(prefix) - 1) == 0) {
+		saw_pool_stats = true;
+	}
+	va_start(args, format);
+	vprintk(format, args);
+	va_end(args);
+}
+#endif
+
 void k_sys_fatal_error_handler(unsigned int reason, const struct arch_esf *esf)
 {
 	ARG_UNUSED(esf);
 
 	if (reason == K_ERR_KERNEL_PANIC) {
+#ifdef TRIGGER_OOM
+		printk("Pool statistics printed: %s\n", saw_pool_stats ? "yes" : "no");
+#endif
 		printk("Caught Zephyr kernel panic\n");
 #ifdef CONFIG_ARCH_POSIX
 		/* Report the expected panic as a successful simulator exit. */
