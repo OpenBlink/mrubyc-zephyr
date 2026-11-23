@@ -118,6 +118,72 @@ mrubyc_embed_script(app app_mrb app.rb)
 The helper accepts Ruby source and generates `app_mrb.h` in the build directory.
 Use a distinct C identifier for each bytecode array linked into your application.
 
+## Memory footprint (ROM and RAM)
+
+The upstream mruby/c 4.0.0 README lists RAM usage as **< 40 KB** in its
+comparison with mruby. The upstream C example reserves a 40 KiB pool, and
+each application chooses its own pool size.
+[Upstream README](https://github.com/mrubyc/mrubyc/blob/release4.0.0/README.md)
+· [Upstream C example](https://github.com/mrubyc/mrubyc/blob/release4.0.0/sample_c/sample_include.c)
+
+The table shows the linked firmware footprint on `qemu_cortex_m3` with
+Zephyr 3.7.2, Zephyr SDK 0.16.9 (Arm GCC 12.2.0), Picolibc, size optimization,
+console output, a 1 kHz system clock, and a 4 KiB main stack. Both builds
+printed the same two lines in QEMU. The Ruby build uses the default
+mruby/c Kconfig options and the committed [Hello sample](samples/hello).
+
+| Firmware | ROM (flash bytes) | Static RAM (bytes) |
+| --- | ---: | ---: |
+| C Hello with `CONFIG_MRUBYC=n` | 7,850 | 7,168 |
+| mruby/c Hello with a 16 KiB pool | 72,724 | 26,368 |
+| Increase over C Hello | +64,874 | +19,200 |
+
+ROM and static RAM are the final linker's `FLASH` and `RAM` region totals.
+The flash increase covers the runtime, HAL, embedded bytecode, and linked
+dependencies. Of the RAM increase, 16,384 bytes are the sample's pool in
+`.bss`. The other 2,816 bytes include runtime and HAL storage and linker
+layout differences. The RAM totals include allocated stacks and the full
+pool reservation. Measure pool use under your application's workload with
+`mrbc_alloc_statistics()` or `CONFIG_MRUBYC_ALLOC_PROFILING`.
+
+In the west workspace, set the path to your Zephyr SDK 0.16.9 installation
+and build Hello. Set `BUILD_VERSION` so the boot banner uses the same text
+in checkouts with or without the Git tag. Read the region totals in the
+final link output and use the Zephyr reports to inspect individual symbols.
+
+~~~sh
+export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+export ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk-0.16.9
+west build -p always -b qemu_cortex_m3 -d build/footprint-hello \
+  modules/lib/mrubyc-zephyr/samples/hello -- -DBUILD_VERSION=v3.7.2
+west build -d build/footprint-hello -t rom_report
+west build -d build/footprint-hello -t ram_report
+~~~
+
+To reproduce the C baseline, copy the sample to `hello-c` in the workspace
+and set `CONFIG_MRUBYC=n` in its `prj.conf`. Replace its `main.c` with the
+following program.
+
+~~~c
+#include <zephyr/sys/printk.h>
+
+int main(void)
+{
+    printk("Hello from mruby/c on Zephyr!\n");
+    printk("mruby/c finished\n");
+    return 0;
+}
+~~~
+
+~~~sh
+west build -p always -b qemu_cortex_m3 -d build/footprint-c \
+  hello-c -- -DBUILD_VERSION=v3.7.2
+~~~
+
+Measure again for each target, configuration, and workload you intend to
+ship.
+[Zephyr memory analysis tools](https://docs.zephyrproject.org/3.7.0/develop/optimizations/tools.html#footprint-and-memory-usage)
+
 ## Upgrade from v3.4.1
 
 1. Change the module's west manifest revision to `v4.0.0` and run
