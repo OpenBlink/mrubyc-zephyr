@@ -161,7 +161,6 @@ firmware.
 | `CONFIG_MRUBYC_USE_STRING_UTF8` | `n` | Use UTF-8 character indexing in supported String methods. |
 | `CONFIG_MRUBYC_USE_UNICODE_CASE` | `n` | Add Unicode BMP case conversion when UTF-8 is enabled. |
 | `CONFIG_MRUBYC_INT64` | `n` | Use 64-bit Ruby integers. |
-| `CONFIG_MRUBYC_NAN_BOXING` | `n` | Use the upstream compact value layout with GCC, double-precision Float, and 32-bit Integer. |
 | `CONFIG_MRUBYC_SUPPORT_OP_EXT` | `y` | Enable extended bytecode operands (`MRBC_SUPPORT_OP_EXT=1`). |
 | `CONFIG_MRUBYC_INSTANCE_DESTRUCTOR` | `y` | Allow C extensions to register instance destructor callbacks. |
 | `CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL` | `8` | Record up to this many call frames per exception (1–64). |
@@ -171,7 +170,7 @@ firmware.
 | `CONFIG_MRUBYC_NO_STDIO` | `n` | Omit Ruby `p`, `print`, `puts`, and `printf`. |
 | `CONFIG_MRUBYC_CONVERT_CRLF` | `n` | Convert LF to CRLF in mruby/c console output when Zephyr's UART console is disabled. |
 | `CONFIG_MRUBYC_DEBUG_REGS` | `n` | Print VM register usage when a VM finishes. |
-| `CONFIG_MRUBYC_DISABLE_LEGACY_VALUE_MACROS` | `n` | Omit legacy C value macros such as `GET_INT_ARG` and `MRBC_TO_INT`. Enabled automatically with NaN boxing. |
+| `CONFIG_MRUBYC_DISABLE_LEGACY_VALUE_MACROS` | `n` | Omit legacy C value macros such as `GET_INT_ARG` and `MRBC_TO_INT`. |
 | `CONFIG_MRUBYC_TICK_UNIT_MS` | `1` | Scheduler timer period in milliseconds (1–10). |
 | `CONFIG_MRUBYC_TIMESLICE_TICK_COUNT` | `10` | Scheduler time slice in mruby/c ticks (1–255). |
 | `CONFIG_MRUBYC_SCHEDULER_EXIT` | `y` | Return from `mrbc_run()` when active tasks drain. When disabled, the scheduler stays idle in its Zephyr thread. |
@@ -185,8 +184,8 @@ Zephyr timer.
 - The sample scripts use `puts`. Update scripts that call console methods
   before omitting those methods. Enable CRLF conversion only when the console
   backend passes line feeds through.
-- The NaN-boxing and destructor settings affect C layouts.
-  Disabling destructors also removes `mrbc_define_destructor()`. Use Kconfig to
+- Disabling destructors changes the class layout and removes
+  `mrbc_define_destructor()`. Use Kconfig to
   keep the application and runtime headers in sync. Link additional Zephyr
   libraries that include `mrubyc.h` with
   `zephyr_library_link_libraries(MRUBYC_API)`.
@@ -204,6 +203,8 @@ The module uses the pool allocator because upstream `String#clear` assumes
 that shrinking a buffer keeps its address.
 String lengths use the default 16-bit field. Wider Strings can exceed the
 16-bit limits in `String#bytes` and exception message storage.
+The default value layout preserves missing-keyword detection for C extensions
+using `MRBC_KW_ARG`. Upstream NaN boxing misclassifies those values.
 
 ## Tests and contributions
 

@@ -35,9 +35,8 @@ BUILD_ASSERT(MRBC_SCHEDULER_EXIT == IS_ENABLED(CONFIG_MRUBYC_SCHEDULER_EXIT));
 #if defined(MRBC_SUPPORT_OP_EXT) != defined(CONFIG_MRUBYC_SUPPORT_OP_EXT)
 #error "The application and mruby/c disagree on extended operands"
 #endif
-#if defined(MRBC_USE_ALLOC_PROF) != defined(CONFIG_MRUBYC_ALLOC_PROFILING) || \
-	defined(MRBC_NAN_BOXING) != defined(CONFIG_MRUBYC_NAN_BOXING)
-#error "The application and mruby/c disagree on memory configuration"
+#if defined(MRBC_USE_ALLOC_PROF) != defined(CONFIG_MRUBYC_ALLOC_PROFILING)
+#error "The application and mruby/c disagree on allocator profiling"
 #endif
 #if defined(MRBC_NO_STDIO) != defined(CONFIG_MRUBYC_NO_STDIO) || \
 	defined(MRBC_CONVERT_CRLF) != defined(CONFIG_MRUBYC_CONVERT_CRLF) || \
@@ -60,7 +59,7 @@ BUILD_ASSERT(MRBC_SUPPORT_OP_EXT == 1);
 BUILD_ASSERT(MRBC_KV_SIZE_INIT == 2 && MRBC_KV_SIZE_INCREMENT == 5);
 BUILD_ASSERT(sizeof(MRBC_STRING_SIZE_T) == sizeof(uint16_t));
 #if defined(MRBC_INT64) || defined(MRBC_USE_ALLOC_PROF) || \
-	defined(MRBC_NAN_BOXING) || defined(MRBC_NO_STDIO) || defined(MRBC_CONVERT_CRLF) || \
+	defined(MRBC_NO_STDIO) || defined(MRBC_CONVERT_CRLF) || \
 	defined(MRBC_DEBUG_REGS) || !defined(GET_INT_ARG)
 #error "Unexpected upstream defaults"
 #endif
@@ -160,7 +159,6 @@ static void check_optional_features(void)
 	zassert_true(profile.max >= profile.initial + 128);
 	zassert_equal(profile.min, profile.initial);
 #endif
-
 }
 
 ZTEST(mrubyc, test_loader_timer_and_extended_operands)

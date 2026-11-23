@@ -72,15 +72,6 @@ config MRUBYC_USE_UNICODE_CASE
 config MRUBYC_INT64
 	bool "64-bit Ruby integers"
 
-config MRUBYC_NAN_BOXING
-	bool "NaN-boxed mruby/c values"
-	depends on MRUBYC_FLOAT_DOUBLE && !MRUBYC_INT64
-	select MRUBYC_DISABLE_LEGACY_VALUE_MACROS
-	help
-	  Use the upstream compact value representation on 32-bit GCC
-	  targets. This changes the mrbc_value layout used by C extensions
-	  and hides legacy C macros that depend on the regular layout.
-
 config MRUBYC_SUPPORT_OP_EXT
 	bool "Extended bytecode operands"
 	default y

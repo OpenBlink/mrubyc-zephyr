@@ -37,11 +37,6 @@ tests:
     platform_allow: [native_sim, qemu_cortex_m3]
     extra_configs:
       - CONFIG_MRUBYC_SCHEDULER_EXIT=n
-  mrubyc.integration.pool_nan_boxing:
-    platform_allow: qemu_cortex_m3
-    extra_configs:
-      - CONFIG_MRUBYC_NAN_BOXING=y
-      - CONFIG_TRAP_UNALIGNED_ACCESS=y
   mrubyc.integration.diagnostics:
     platform_allow: [native_sim, qemu_cortex_m3]
     extra_configs:
