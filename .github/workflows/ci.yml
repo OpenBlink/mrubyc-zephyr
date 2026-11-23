@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  twister:
+    name: Twister / ${{ matrix.board }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: native_sim
+            toolchain: host
+            packages: gcc-multilib g++-multilib
+          - board: qemu_cortex_m3
+            toolchain: zephyr
+            packages: qemu-system-arm
+    env:
+      ZEPHYR_TOOLCHAIN_VARIANT: ${{ matrix.toolchain }}
+      QEMU_BIN_PATH: /usr/bin
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
+      CCACHE_MAXSIZE: 250M
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: workspace/mrubyc-zephyr
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: workspace/mrubyc-zephyr/.github/requirements.txt
+      - name: Set tool paths
+        run: |
+          echo "ZEPHYR_SDK_INSTALL_DIR=$RUNNER_TEMP/zephyr-sdk" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
+      - name: Install host dependencies
+        env:
+          BOARD_PACKAGES: ${{ matrix.packages }}
+        run: |
+          sudo apt-get update
+          read -r -a board_packages <<< "$BOARD_PACKAGES"
+          sudo apt-get install -y --no-install-recommends \
+            bison ccache device-tree-compiler gperf ninja-build rake "${board_packages[@]}"
+          python -m pip install -r workspace/mrubyc-zephyr/.github/requirements.txt
+      - uses: ./workspace/mrubyc-zephyr/.github/actions/setup-mrbc
+      - name: Cache west projects
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            workspace/zephyr
+            workspace/modules/hal/cmsis
+          key: west-${{ runner.os }}-${{ hashFiles('workspace/mrubyc-zephyr/west.yml') }}
+      - name: Initialize Zephyr LTS workspace
+        working-directory: workspace
+        run: |
+          west init -l mrubyc-zephyr
+          west update --fetch=smart --narrow
+          test "$(git -C zephyr rev-parse HEAD)" = bbbf8b30094dacd0d6830946ba206bcec8af6b0c
+          test "$(git -C modules/hal/cmsis rev-parse HEAD)" = "$(west list cmsis -f '{revision}')"
+          test -z "$(git -C zephyr status --porcelain)"
+          test -z "$(git -C modules/hal/cmsis status --porcelain)"
+      - name: Cache SDK archives
+        if: matrix.toolchain == 'zephyr'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/zephyr-sdk-downloads
+          key: sdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh') }}
+      - name: Install Arm toolchain
+        if: matrix.toolchain == 'zephyr'
+        run: |
+          bash workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh \
+            "$RUNNER_TEMP/zephyr-sdk-downloads" "$ZEPHYR_SDK_INSTALL_DIR"
+      - name: Identify the C compiler
+        id: compiler
+        run: |
+          compiler=cc
+          if [[ "$ZEPHYR_TOOLCHAIN_VARIANT" == zephyr ]]; then
+            compiler="$ZEPHYR_SDK_INSTALL_DIR/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc"
+          fi
+          fingerprint=$("$compiler" --version | sha256sum | cut -d' ' -f1)
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+      - name: Cache Zephyr compilation
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-24.04-${{ runner.arch }}-${{ matrix.board }}-${{ steps.compiler.outputs.fingerprint }}-${{ hashFiles('workspace/mrubyc-zephyr/west.yml', 'workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-24.04-${{ runner.arch }}-${{ matrix.board }}-${{ steps.compiler.outputs.fingerprint }}-${{ hashFiles('workspace/mrubyc-zephyr/west.yml', 'workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh') }}-
+      - name: Run Twister
+        working-directory: workspace
+        env:
+          BOARD: ${{ matrix.board }}
+        run: |
+          west twister -p "$BOARD" -T mrubyc-zephyr/samples -T mrubyc-zephyr/tests \
+            --jobs 2 --outdir twister-out --inline-logs
+      - name: Show compiler cache statistics
+        if: always()
+        run: ccache --show-stats
+      - name: Upload Twister results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: twister-${{ matrix.board }}
+          path: |
+            workspace/twister-out/*.json
+            workspace/twister-out/*.xml
+            workspace/twister-out/**/*.log
+          retention-days: 14
+
+  bytecode:
+    name: Bundled source and bytecode
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install compiler build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends bison gperf rake
+      - uses: ./.github/actions/setup-mrbc
+      - name: Verify bundled sources
+        run: bash scripts/check-vendor.sh
+
+  posix:
+    name: POSIX smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install 32-bit C development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-multilib
+      - run: bash scripts/posix-smoke.sh
+
+  workflows:
+    name: Workflow and shell validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run actionlint and ShellCheck
+        run: |
+          archive="$RUNNER_TEMP/actionlint_1.7.12_linux_amd64.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            -o "$archive"
+          printf '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  %s\n' \
+            "$archive" | sha256sum --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+          shellcheck scripts/*.sh

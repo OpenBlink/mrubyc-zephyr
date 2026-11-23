@@ -1,0 +1,32 @@
+name: Set up mrbc
+description: Build or restore the host compiler for the bundled mruby/c release
+runs:
+  using: composite
+  steps:
+    - name: Identify the host toolchain
+      id: toolchain
+      shell: bash
+      run: |
+        fingerprint=$( { cc --version; ruby --version; rake --version; bison --version; } | sha256sum | cut -d' ' -f1)
+        echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+    - name: Cache mrbc
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/mrubyc-mrbc
+        key: mrbc-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('**/scripts/build-mrbc.sh') }}
+    - name: Build mrbc
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        MODULE: ${{ github.action_path }}/../../..
+      run: bash "$MODULE/scripts/build-mrbc.sh" "$RUNNER_TEMP/mrubyc-mrbc"
+    - name: Verify bytecode generation
+      shell: bash
+      env:
+        MODULE: ${{ github.action_path }}/../../..
+      run: |
+        bin="$RUNNER_TEMP/mrubyc-mrbc/bin"
+        "$bin/mrbc" --version
+        bash "$MODULE/scripts/check-bytecode.sh" "$bin/mrbc"
+        echo "$bin" >> "$GITHUB_PATH"

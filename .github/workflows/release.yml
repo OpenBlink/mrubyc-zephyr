@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate tag and approval policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the tag matches the runtime and main
+        run: |
+          tag="$GITHUB_REF_NAME"
+          version=$(sed -nE 's/^MRUBYC_VERSION[[:blank:]]*=[[:blank:]]*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' vendor/mrubyc/src/VERSION)
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$tag" != "v$version" ]]; then
+            echo "::error::The release tag must match the bundled MRUBYC_VERSION (v$version)"
+            exit 1
+          fi
+          git merge-base --is-ancestor HEAD origin/main
+      - name: Verify production requires approval and allows release tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          endpoint="repos/$GITHUB_REPOSITORY/environments/production"
+          gh api "$endpoint" | jq -e '
+            .deployment_branch_policy.custom_branch_policies and
+            any(.protection_rules[]; .type == "required_reviewers" and (.reviewers | length > 0))
+          '
+          gh api "$endpoint/deployment-branch-policies" | jq -e '
+            any(.branch_policies[]; .name == "v*" and .type == "tag")
+          '
+
+  test:
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: [validate, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          generate_release_notes: true

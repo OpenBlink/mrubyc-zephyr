@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+menuconfig MRUBYC
+	bool "mruby/c runtime"
+	depends on MULTITHREADING && SYS_CLOCK_EXISTS && !SMP && !BIG_ENDIAN && !64BIT
+	help
+	  Build mruby/c and its Zephyr scheduler and console integration.
+	  The application supplies a memory pool and starts the Ruby tasks.
+
+if MRUBYC
+
+config APP_LINK_WITH_MRUBYC_API
+	bool
+	default y
+
+config MRUBYC_MAX_VM_COUNT
+	int "Maximum simultaneous VMs"
+	range 1 255
+	default 5
+
+config MRUBYC_MAX_REGS_SIZE
+	int "Default registers per VM"
+	range 32 65535
+	default 110
+
+config MRUBYC_MAX_SYMBOLS_COUNT
+	int "Dynamic symbol table capacity"
+	range 32 32512
+	default 255
+
+choice MRUBYC_FLOAT
+	prompt "Ruby Float representation"
+	default MRUBYC_FLOAT_DOUBLE
+
+config MRUBYC_FLOAT_SINGLE
+	bool "Single precision"
+
+config MRUBYC_FLOAT_DOUBLE
+	bool "Double precision"
+
+endchoice
+
+config MRUBYC_USE_MATH
+	bool "Math module"
+	depends on NATIVE_LIBC || PICOLIBC || NEWLIB_LIBC || EXTERNAL_LIBC
+	help
+	  Enable the Ruby Math module. An external C library must provide libm.
+
+config MRUBYC_USE_STRING_UTF8
+	bool "UTF-8 character indexing"
+	help
+	  Index characters in UTF-8 strings in supported String methods.
+
+config MRUBYC_USE_UNICODE_CASE
+	bool "Unicode case conversion"
+	depends on MRUBYC_USE_STRING_UTF8
+	help
+	  Enable Unicode Basic Multilingual Plane case conversion.
+
+config MRUBYC_INT64
+	bool "64-bit Ruby integers"
+
+config MRUBYC_SUPPORT_OP_EXT
+	bool "Extended bytecode operands"
+	default y
+
+endif # MRUBYC
