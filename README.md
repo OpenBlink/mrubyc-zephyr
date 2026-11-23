@@ -159,12 +159,23 @@ west build -d build/footprint-hello -t rom_report
 west build -d build/footprint-hello -t ram_report
 ~~~
 
-To reproduce the C baseline, copy the sample, set `CONFIG_MRUBYC=n` in
-`prj.conf`, and replace `main.c` with a `main()` that calls `printk()` to
-print `Hello from mruby/c on Zephyr!\n` and `mruby/c finished\n`, then
-returns zero. Build that copy in a fresh build directory with the same
-board and toolchain. Measure again for each target, configuration, and
-workload you intend to ship.
+To reproduce the C baseline, copy the sample and set `CONFIG_MRUBYC=n` in
+its `prj.conf`. Replace its `main.c` with the following program and build
+the copy in a fresh build directory with the same board and toolchain.
+
+~~~c
+#include <zephyr/sys/printk.h>
+
+int main(void)
+{
+    printk("Hello from mruby/c on Zephyr!\n");
+    printk("mruby/c finished\n");
+    return 0;
+}
+~~~
+
+Measure again for each target, configuration, and workload you intend to
+ship.
 [Zephyr memory analysis tools](https://docs.zephyrproject.org/3.7.0/develop/optimizations/tools.html#footprint-and-memory-usage)
 
 ## Upgrade from v3.4.1
