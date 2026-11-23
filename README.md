@@ -118,8 +118,9 @@ mrubyc_embed_script(app app_mrb app.rb)
 The helper accepts Ruby source and generates `app_mrb.h` in the build directory.
 Use a distinct C identifier for each bytecode array linked into your application.
 
-See the [mruby/c application guide](docs/ruby-guide.md) for examples of
-handling input, using collections, scheduling tasks, and exposing a C method.
+See the [mruby/c application guide](docs/ruby-guide.md) for Ruby
+compatibility and recipes, task scheduling and cleanup, C bindings, and
+peripheral I/O design.
 
 ## Memory footprint (ROM and RAM)
 

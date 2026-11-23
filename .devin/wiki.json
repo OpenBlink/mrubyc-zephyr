@@ -134,13 +134,13 @@
       "parent": null,
       "page_notes": [
         {
-          "content": "Organize around inputs, collections, failure handling, task timing, and C boundaries. Give enough context to run a recipe by replacing the Hello script and compiling with the pinned tool."
+          "content": "Use the guide to show how to build and run a recipe with pinned mrbc and Hello. Link to the Write and port Ruby section for CRuby alternatives, failure recovery, and how to verify behavior in the resolved firmware configuration."
         },
         {
           "content": "Prefer explicit bounds and units, predictable allocation in loops, and a specific rescue where the caller can recover. Link to the relevant recipe instead of pasting whole scripts repeatedly."
         },
         {
-          "content": "Explain how to verify script behavior on the firmware's resolved Kconfig and target. Cite README.md#known-limitations before claiming support for a Ruby feature."
+          "content": "Link docs/ruby-guide.md#design-peripheral-io for application binding design using the pinned Common I/O API Guidelines. Describe GPIO, ADC, PWM, UART, I2C, and SPI as application-side contracts. The repository supplies the VM, scheduler, and Zephyr HAL."
         }
       ]
     },
@@ -153,7 +153,7 @@
           "content": "Explain 32-bit default Ruby Integer, optional 64-bit Integer, Float precision choices and optional Math. State why input bounds matter before arithmetic. Link to the documented 32-bit minimum literal and mixed-type arithmetic limitations."
         },
         {
-          "content": "Show byte length and slicing with String#bytesize and String#byteslice, and explain which String methods gain character indexing with MRUBYC_USE_STRING_UTF8. Unicode case conversion depends on UTF-8 and covers the Basic Multilingual Plane."
+          "content": "Show how the guide reads a two-byte big-endian field with bytesize and getbyte. Use byteslice for byte slicing. Explain that UTF-8 indexing applies to specific String methods and that Unicode case conversion depends on UTF-8 and covers the Basic Multilingual Plane."
         },
         {
           "content": "Explain how to check the actual method table in vendor/mrubyc/src/_autogen_class_string.h and how to verify non-ASCII behavior under the intended Kconfig. Link to Language Features and Bytecode Options for defaults."
@@ -169,7 +169,7 @@
           "content": "Show the guide's select and each example and expected 640 and 910 outputs. Explain map versus select versus each and bound the inputs when building result arrays."
         },
         {
-          "content": "Describe how to verify Array, Hash, and other method availability in the generated class headers and the embedded Ruby library. Do not infer that every Enumerable or CRuby method is available."
+          "content": "Use the guide's porting table for explicit block alternatives to Symbol-to-Proc and chained enumerators. Verify methods in the generated class tables and the embedded Ruby library. Explain how to check for missing Hash keys and how to preserve false in default values."
         },
         {
           "content": "Use a bounded set of symbol names instead of interning arbitrary strings. Explain why dynamic symbols consume capacity and how this relates to the sizing and profiling pages."
@@ -185,7 +185,7 @@
           "content": "Use the interval_ms recipe for input types, bounds, and a specific rescue. Describe how to distinguish nil, false, zero and empty strings when they have different meanings."
         },
         {
-          "content": "Explain why application recovery and resource cleanup paths need testing with the exact compiler and runtime. Link to the documented return-through-ensure limitation when discussing cleanup."
+          "content": "Use the guide's Ruby fake transfer for bounded polling and cleanup on completion and timeout. Link to the documented return-through-ensure limitation and distinguish the fake from any physical driver tests."
         },
         {
           "content": "Explain that handled exceptions do not invoke the shutdown hook. A VM ending with an unhandled exception has a separate configurable policy. Link to Diagnostics, Fatal Hooks, and C API for Task.create behavior."
@@ -217,10 +217,10 @@
           "content": "Use the check_percent recipe for registration after mrbc_init(), validation of count, type and range, and return of a value or an exception. Show the Ruby-side expected output. Keep the example independent of a physical driver."
         },
         {
-          "content": "Document v[0] as receiver/return slot and positional arguments for the example. Explain borrowed, retained, and transferred references, release on return assignment, and why a callback must return after mrbc_raise()."
+          "content": "Use poll_period and vendor/mrubyc/src/value.h for keyword presence versus nil, mandatory and unknown keyword validation, and cleanup after raising. Explain the receiver/return slot, borrowed, retained, and transferred references, and instance destructors."
         },
         {
-          "content": "Show where to link MRUBYC_API for a separate Zephyr library, why destructor and value layout settings must agree, and why ISR or worker inputs should be handed to the owning VM thread. Link to the C API and value model pages."
+          "content": "Show where to link MRUBYC_API and why configuration and value layouts must agree. Link docs/ruby-guide.md#design-peripheral-io for resource ownership, buffer lifetime, timeout and cancellation, fake backend coverage, and bounded ISR notifications delivered to the owning VM thread."
         }
       ]
     },
