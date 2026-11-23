@@ -69,13 +69,6 @@ config MRUBYC_USE_UNICODE_CASE
 	help
 	  Enable Unicode Basic Multilingual Plane case conversion.
 
-config MRUBYC_STRING_SIZE_32BIT
-	bool "32-bit String length field"
-	help
-	  Store String lengths in uint32_t instead of uint16_t. Long
-	  strings also require a memory pool or C library heap large
-	  enough to hold their contents.
-
 config MRUBYC_INT64
 	bool "64-bit Ruby integers"
 

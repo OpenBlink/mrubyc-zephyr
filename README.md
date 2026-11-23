@@ -160,7 +160,6 @@ firmware.
 | `CONFIG_MRUBYC_USE_MATH` | `n` | Enable the Math module with Float and a C library that provides its math functions. |
 | `CONFIG_MRUBYC_USE_STRING_UTF8` | `n` | Use UTF-8 character indexing in supported String methods. |
 | `CONFIG_MRUBYC_USE_UNICODE_CASE` | `n` | Add Unicode BMP case conversion when UTF-8 is enabled. |
-| `CONFIG_MRUBYC_STRING_SIZE_32BIT` | `n` | Use a 32-bit String length field. Available memory and individual String methods still constrain usable lengths. |
 | `CONFIG_MRUBYC_INT64` | `n` | Use 64-bit Ruby integers. |
 | `CONFIG_MRUBYC_NAN_BOXING` | `n` | Use the upstream compact value layout with GCC, double-precision Float, and 32-bit Integer. |
 | `CONFIG_MRUBYC_SUPPORT_OP_EXT` | `y` | Enable extended bytecode operands (`MRBC_SUPPORT_OP_EXT=1`). |
@@ -186,7 +185,7 @@ Zephyr timer.
 - The sample scripts use `puts`. Update scripts that call console methods
   before omitting those methods. Enable CRLF conversion only when the console
   backend passes line feeds through.
-- The NaN-boxing, String length, and destructor settings affect C layouts.
+- The NaN-boxing and destructor settings affect C layouts.
   Disabling destructors also removes `mrbc_define_destructor()`. Use Kconfig to
   keep the application and runtime headers in sync. Link additional Zephyr
   libraries that include `mrubyc.h` with
@@ -203,6 +202,8 @@ The module uses the periodic timer because the upstream software scheduler
 can ignore `Task.pass` and lose preemption after a rescued exception.
 The module uses the pool allocator because upstream `String#clear` assumes
 that shrinking a buffer keeps its address.
+String lengths use the default 16-bit field. Wider Strings can exceed the
+16-bit limits in `String#bytes` and exception message storage.
 
 ## Tests and contributions
 
