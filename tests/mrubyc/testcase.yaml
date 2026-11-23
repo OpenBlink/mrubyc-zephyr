@@ -1,12 +1,13 @@
 common:
   tags: mrubyc
-  platform_allow: [native_sim, qemu_cortex_m3]
   harness: ztest
   timeout: 30
 tests:
   mrubyc.integration.defaults:
+    platform_allow: [native_sim, qemu_cortex_m3]
     extra_args: EXPECT_DEFAULTS=ON
   mrubyc.integration.no_op_ext:
+    platform_allow: [native_sim, qemu_cortex_m3]
     extra_configs:
       - CONFIG_MRUBYC_SUPPORT_OP_EXT=n
   mrubyc.integration.trap_unaligned:
@@ -14,6 +15,7 @@ tests:
     extra_configs:
       - CONFIG_TRAP_UNALIGNED_ACCESS=y
   mrubyc.integration.custom:
+    platform_allow: [native_sim, qemu_cortex_m3]
     extra_configs:
       - CONFIG_MRUBYC_MAX_VM_COUNT=3
       - CONFIG_MRUBYC_MAX_REGS_SIZE=64
