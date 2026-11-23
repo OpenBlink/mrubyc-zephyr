@@ -48,8 +48,12 @@ jobs:
           cache: pip
           cache-dependency-path: workspace/mrubyc-zephyr/.github/requirements.txt
       - name: Set tool paths
+        env:
+          TOOLCHAIN: ${{ matrix.toolchain }}
         run: |
-          echo "ZEPHYR_SDK_INSTALL_DIR=$RUNNER_TEMP/zephyr-sdk" >> "$GITHUB_ENV"
+          if [[ "$TOOLCHAIN" == zephyr ]]; then
+            echo "ZEPHYR_SDK_INSTALL_DIR=$RUNNER_TEMP/zephyr-sdk" >> "$GITHUB_ENV"
+          fi
           echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
       - name: Install host dependencies
         env:
@@ -61,6 +65,7 @@ jobs:
             bison ccache device-tree-compiler gperf ninja-build rake "${board_packages[@]}"
           python -m pip install -r workspace/mrubyc-zephyr/.github/requirements.txt
       - uses: ./workspace/mrubyc-zephyr/.github/actions/setup-mrbc
+        id: mrbc
       - name: Cache west projects
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -108,9 +113,10 @@ jobs:
         working-directory: workspace
         env:
           BOARD: ${{ matrix.board }}
+          MRBC: ${{ steps.mrbc.outputs.path }}
         run: |
           west twister -p "$BOARD" -T mrubyc-zephyr/samples -T mrubyc-zephyr/tests \
-            --jobs 2 --outdir twister-out --inline-logs
+            -x "MRUBYC_MRBC=$MRBC" --jobs 2 --outdir twister-out --inline-logs
       - name: Show compiler cache statistics
         if: always()
         run: ccache --show-stats

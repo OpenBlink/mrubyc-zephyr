@@ -1,5 +1,9 @@
 name: Set up mrbc
 description: Build or restore the host compiler for the bundled mruby/c release
+outputs:
+  path:
+    description: Absolute path to the verified mrbc executable
+    value: ${{ steps.verify.outputs.path }}
 runs:
   using: composite
   steps:
@@ -22,11 +26,12 @@ runs:
         MODULE: ${{ github.action_path }}/../../..
       run: bash "$MODULE/scripts/build-mrbc.sh" "$RUNNER_TEMP/mrubyc-mrbc"
     - name: Verify bytecode generation
+      id: verify
       shell: bash
       env:
         MODULE: ${{ github.action_path }}/../../..
       run: |
-        bin="$RUNNER_TEMP/mrubyc-mrbc/bin"
-        "$bin/mrbc" --version
-        bash "$MODULE/scripts/check-bytecode.sh" "$bin/mrbc"
-        echo "$bin" >> "$GITHUB_PATH"
+        compiler="$RUNNER_TEMP/mrubyc-mrbc/bin/mrbc"
+        "$compiler" --version
+        bash "$MODULE/scripts/check-bytecode.sh" "$compiler"
+        echo "path=$compiler" >> "$GITHUB_OUTPUT"
