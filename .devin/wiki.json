@@ -55,6 +55,9 @@
         },
         {
           "content": "Use built-in classes and native C extensions as examples of the supported programming model. Refer to the embedded class library and compatibility pages for details of available methods and known limitations."
+        },
+        {
+          "content": "Attribute the under-40-KB RAM figure to the official mruby/c 4.0.0 comparison in README.md's Memory footprint (ROM and RAM) section. Explain that applications select their pool size, and link to Memory Pool, Allocation, and Profiling for the Zephyr build measurements."
         }
       ]
     },
@@ -204,7 +207,7 @@
     },
     {
       "title": "Memory Pool, Allocation, and Profiling",
-      "purpose": "Explain the application's pool, runtime allocation paths, memory accounting, and the available measurement APIs.",
+      "purpose": "Explain the application's pool, runtime allocation paths, measured Zephyr ROM and RAM footprint, and the available measurement APIs.",
       "parent": "Inside the mruby/c Runtime",
       "page_notes": [
         {
@@ -215,6 +218,9 @@
         },
         {
           "content": "Tie memory sizing to task/register and object demand, and explain the standard allocation-failure behavior. Send readers to the fatal policy page for Zephyr panic and optional statistics."
+        },
+        {
+          "content": "Use README.md's Memory footprint (ROM and RAM) table and commands for the C and mruby/c Hello builds on qemu_cortex_m3. Carry over the board, Zephyr and SDK versions, and the linker FLASH and RAM totals. Distinguish reserved pool and stack bytes from measured pool occupancy, and explain how to repeat the measurements with Zephyr's rom_report and ram_report."
         }
       ]
     },
