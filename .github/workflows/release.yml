@@ -52,7 +52,7 @@ jobs:
 
   test:
     needs: validate
-    uses: ./.github/workflows/ci.yml
+    uses: ./.github/workflows/ci.yml # zizmor: ignore[self-repository] actionlint 1.7.12 supports relative workflow paths
 
   publish:
     needs: [validate, test]
@@ -64,5 +64,6 @@ jobs:
     steps:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        # zizmor: ignore[superfluous-actions] keep generated release notes and existing release behavior
         with:
           generate_release_notes: true
