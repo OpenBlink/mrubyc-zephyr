@@ -8,6 +8,7 @@ Your application provides the memory pool and starts the Ruby tasks.
 
 | Module release | mruby/c release | Host compiler | Bytecode |
 | --- | --- | --- | --- |
+| `v4.0.0` | `release4.0.0` | mruby `4.0.0` (`mrbc`) | `RITE0400` |
 | `v3.4.1` | `release3.4.1` | mruby `3.4.0` (`mrbc`) | `RITE0300` |
 
 The samples target Zephyr 3.7.2 (LTS) on `native_sim/native` and `qemu_cortex_m3`.
@@ -22,7 +23,7 @@ For `native_sim/native` on a 64-bit Linux host, install the 32-bit C
 development libraries and a compiler that can build 32-bit binaries.
 
 ~~~sh
-west init -m https://github.com/OpenBlink/mrubyc-zephyr --mr v3.4.1 mrubyc-workspace
+west init -m https://github.com/OpenBlink/mrubyc-zephyr --mr v4.0.0 mrubyc-workspace
 cd mrubyc-workspace
 west update
 python -m pip install -r zephyr/scripts/requirements.txt
@@ -43,7 +44,7 @@ Add this project entry under `manifest.projects` in your west manifest.
 ~~~yaml
 - name: mrubyc-zephyr
   url: https://github.com/OpenBlink/mrubyc-zephyr
-  revision: v3.4.1
+  revision: v4.0.0
   path: modules/lib/mrubyc-zephyr
 ~~~
 
@@ -63,8 +64,8 @@ rounds up each mruby/c timer period, so Ruby sleep and scheduling take longer.
 
 ## Run your own Ruby code
 
-Build the host compiler with `rake` from the [mruby 3.4.0
-source](https://github.com/mruby/mruby/tree/3.4.0). The resulting executable is
+Build the host compiler with `rake` from the [mruby 4.0.0
+source](https://github.com/mruby/mruby/tree/4.0.0). The resulting executable is
 `bin/mrbc`. Confirm the version with `mrbc --version`, then compile your Ruby
 source to a C header.
 
@@ -116,6 +117,19 @@ mrubyc_embed_script(app app_mrb app.rb)
 The helper accepts Ruby source and generates `app_mrb.h` in the build directory.
 Use a distinct C identifier for each bytecode array linked into your application.
 
+## Upgrade from v3.4.1
+
+1. Change the module's west manifest revision to `v4.0.0` and run
+   `west update mrubyc-zephyr`.
+2. Select mrbc 4.0.0 and regenerate all embedded bytecode from Ruby source,
+   including headers checked into your application. mruby/c 4.0.0 rejects
+   `RITE0300` bytecode.
+3. Rebuild the firmware from a clean build directory. If your C code calls
+   `mrbc_find_method()`, update it for the new `mrbc_class *` return type.
+
+To return to v3.4.1, pin that revision and regenerate the application
+bytecode with mrbc 3.4.0 before rebuilding.
+
 ## Configuration
 
 | Kconfig option | Default | Purpose |
@@ -140,7 +154,7 @@ in sync. Link additional Zephyr libraries that include `mrubyc.h` with
 
 ## Tests and contributions
 
-Put mrbc 3.4.0 on your `PATH` and run Twister from the module's west workspace.
+Put mrbc 4.0.0 on your `PATH` and run Twister from the module's west workspace.
 For Cortex-M3, install
 [Zephyr SDK 0.16.9](https://github.com/zephyrproject-rtos/sdk-ng/releases/tag/v0.16.9)
 with the Arm toolchain and QEMU.
@@ -165,10 +179,8 @@ before pushing a release tag.
 ## License
 
 The integration is distributed under the [BSD 3-Clause License](LICENSE).
-The bundled mruby/c runtime comes from the
-[release3.4.1 archive](https://github.com/mrubyc/mrubyc/releases/tag/release3.4.1)
-and retains the [mruby/c license](vendor/mrubyc/LICENSE) and
-[Unicode license](vendor/mrubyc/LICENSE.unicode). The
-[Zephyr HAL](zephyr/hal) comes from the
-[upstream mruby/c Zephyr port](https://github.com/mrubyc/mrubyc/commit/32b4ae7d8598213e8d5990f174e1ad5abc1cafa1)
-and retains its [license](zephyr/hal/LICENSE).
+The bundled mruby/c runtime and [Zephyr HAL](zephyr/hal) come from the
+[release4.0.0 archive](https://github.com/mrubyc/mrubyc/releases/tag/release4.0.0).
+They retain the [mruby/c license](vendor/mrubyc/LICENSE), the
+[Unicode license](vendor/mrubyc/LICENSE.unicode), and the
+[HAL license](zephyr/hal/LICENSE).

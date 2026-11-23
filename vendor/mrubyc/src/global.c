@@ -3,8 +3,9 @@
   Constant and global variables.
 
   <pre>
-  Copyright (C) 2015- Kyushu Institute of Technology.
-  Copyright (C) 2015- Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -71,7 +72,7 @@ int mrbc_set_const( mrbc_sym sym_id, mrbc_value *v )
   @param  v		pointer to mrbc_value.
   @return		mrbc_error_code.
 */
-int mrbc_set_class_const( const struct RClass *cls, mrbc_sym sym_id, mrbc_value *v )
+int mrbc_set_class_const( const mrbc_class *cls, mrbc_sym sym_id, mrbc_value *v )
 {
   char buf[sizeof(mrbc_sym)*4+1];
 
@@ -101,7 +102,7 @@ mrbc_value * mrbc_get_const( mrbc_sym sym_id )
   @param  sym_id	symbol ID.
   @return		pointer to mrbc_value or NULL.
 */
-mrbc_value * mrbc_get_class_const( const struct RClass *cls, mrbc_sym sym_id )
+mrbc_value * mrbc_get_class_const( const mrbc_class *cls, mrbc_sym sym_id )
 {
   char buf[sizeof(mrbc_sym)*4+1];
 
@@ -119,7 +120,7 @@ mrbc_value * mrbc_get_class_const( const struct RClass *cls, mrbc_sym sym_id )
   @param  cls		class
   @param  ret		return value as array type.
 */
-void mrbc_get_all_class_const( const struct RClass *cls, mrbc_value *ret )
+void mrbc_get_all_class_const( const mrbc_class *cls, mrbc_value *ret )
 {
   mrbc_kv_iterator ite = mrbc_kv_iterator_new( &handle_const );
   int flag_object_class = (cls == MRBC_CLASS(Object));
@@ -195,7 +196,7 @@ void mrbc_debug_dump_const( void )
     const mrbc_kv *kv = mrbc_kv_i_next( &ite );
     const char *s = mrbc_symid_to_str(kv->sym_id);
 
-    if( kv->sym_id < 0x100 ) continue;
+    if( kv->sym_id < 0x100 ) continue;	// OFFSET_BUILTIN_SYMBOL in symbol.c
 
     mrbc_printf(" %04x:\"%s\"", kv->sym_id, s );
     if( mrbc_is_nested_symid(kv->sym_id) ) {

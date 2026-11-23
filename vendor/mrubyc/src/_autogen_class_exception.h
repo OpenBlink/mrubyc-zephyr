@@ -129,6 +129,19 @@ struct RBuiltinNoMethodClass mrbc_class_NoMethodError = {
 #endif
 };
 
+/*===== NoMatchingPatternError class =====*/
+struct RBuiltinNoMethodClass mrbc_class_NoMatchingPatternError = {
+  .sym_id = MRBC_SYM(NoMatchingPatternError),
+  .flag_builtin = 1,
+  .flag_nomethod = 1,
+  .num_builtin_method = 0,
+  .super = MRBC_CLASS(StandardError),
+#if defined(MRBC_DEBUG)
+  .obj_mark_ = "CL",
+  .name = "NoMatchingPatternError",
+#endif
+};
+
 /*===== RangeError class =====*/
 struct RBuiltinNoMethodClass mrbc_class_RangeError = {
   .sym_id = MRBC_SYM(RangeError),

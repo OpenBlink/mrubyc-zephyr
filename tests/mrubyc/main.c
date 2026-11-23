@@ -6,6 +6,7 @@
 #include <zephyr/ztest.h>
 
 #include "extended_mrb.h"
+#include "rite0300_mrb.h"
 #include "timer_mrb.h"
 
 BUILD_ASSERT(MAX_VM_COUNT == CONFIG_MRUBYC_MAX_VM_COUNT);
@@ -27,6 +28,7 @@ BUILD_ASSERT(MRBC_USE_UNICODE_CASE == IS_ENABLED(CONFIG_MRUBYC_USE_UNICODE_CASE)
 BUILD_ASSERT(MAX_VM_COUNT == 5 && MAX_REGS_SIZE == 110 && MAX_SYMBOLS_COUNT == 255);
 BUILD_ASSERT(MRBC_USE_FLOAT == 2 && MRBC_USE_MATH == 0);
 BUILD_ASSERT(MRBC_USE_STRING_UTF8 == 0 && MRBC_USE_UNICODE_CASE == 0);
+BUILD_ASSERT(MRBC_INSTANCE_DESTRUCTOR == 1);
 BUILD_ASSERT(MRBC_SUPPORT_OP_EXT == 1);
 #if defined(MRBC_INT64)
 #error "64-bit Ruby integers must be opt-in"
@@ -36,11 +38,10 @@ BUILD_ASSERT(MRBC_SUPPORT_OP_EXT == 1);
 ZTEST(mrubyc, test_loader_timer_and_extended_operands)
 {
 	static _Alignas(8) uint8_t pool[32 * 1024];
-	static const uint8_t rite0400_header[20] = "RITE0400";
 
 	mrbc_init(pool, sizeof(pool));
-	zassert_is_null(mrbc_create_task(rite0400_header, NULL),
-			"The RITE0300 runtime must reject a RITE0400 header");
+	zassert_is_null(mrbc_create_task(rite0300_mrb, NULL),
+			"The RITE0400 runtime must reject bytecode from v3.4.1");
 
 	zassert_not_null(mrbc_create_task(timer_mrb, NULL));
 	int64_t start = k_uptime_get();
@@ -51,7 +52,7 @@ ZTEST(mrubyc, test_loader_timer_and_extended_operands)
 
 	zassert_not_null(timer);
 	zassert_equal(mrbc_type(*timer), MRBC_TT_INTEGER);
-	zassert_equal(mrbc_integer(*timer), 42);
+	zassert_equal(mrbc_integer(*timer), 42, "Array pattern matching must bind both values");
 	zassert_true(elapsed >= 20 && elapsed < 200, "sleep_ms took %lld ms", (long long)elapsed);
 
 	zassert_not_null(mrbc_create_task(extended_mrb, NULL));

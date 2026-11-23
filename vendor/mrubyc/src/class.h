@@ -3,8 +3,9 @@
   Class related functions.
 
   <pre>
-  Copyright (C) 2015- Kyushu Institute of Technology.
-  Copyright (C) 2015- Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -32,6 +33,9 @@ extern "C" {
 
 /***** Constant values ******************************************************/
 #define MRBC_TRAVERSE_NEST_LEVEL 3
+#if !defined(MRBC_INSTANCE_DESTRUCTOR)
+# define MRBC_INSTANCE_DESTRUCTOR 1
+#endif
 
 
 /***** Macros ***************************************************************/
@@ -104,7 +108,9 @@ typedef struct RClass {
     struct RClass *aliased;       //!< aliased class or module.
   };
 
-  void (*destructor)( mrbc_value * );	//!< specify a destructor if need.
+#if MRBC_INSTANCE_DESTRUCTOR
+  void (*destructor)(mrbc_value *);	//!< specify a destructor if need.
+#endif
 
 } mrbc_class;
 
@@ -236,7 +242,7 @@ void mrbc_instance_setiv(mrbc_value *obj, mrbc_sym sym_id, mrbc_value *v);
 mrbc_value mrbc_instance_getiv(mrbc_value *obj, mrbc_sym sym_id);
 void mrbc_instance_clear_vm_id(mrbc_value *v);
 int mrbc_obj_is_kind_of(const mrbc_value *obj, const mrbc_class *tcls);
-mrbc_method *mrbc_find_method(mrbc_method *r_method, mrbc_class *cls, mrbc_sym sym_id);
+mrbc_class *mrbc_find_method(mrbc_method *r_method, mrbc_class *cls, mrbc_sym sym_id);
 mrbc_class *mrbc_get_class_by_name(const char *name);
 mrbc_value mrbc_send(struct VM *vm, mrbc_value *v, int argc, mrbc_value *recv, const char *method_name, int n_params, ...);
 void c_ineffect(struct VM *vm, mrbc_value v[], int argc);
@@ -274,6 +280,7 @@ static inline mrbc_class *find_class_by_object(const mrbc_value *obj)
 }
 
 
+#if MRBC_INSTANCE_DESTRUCTOR
 //================================================================
 /*! Define the destructor
 
@@ -290,6 +297,7 @@ static inline void mrbc_define_destructor( mrbc_class *cls, void (*destructor)(m
 
   cls->destructor = destructor;
 }
+#endif
 
 
 //================================================================

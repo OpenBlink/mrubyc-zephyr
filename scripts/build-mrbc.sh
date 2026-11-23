@@ -3,8 +3,8 @@
 set -euo pipefail
 
 install_dir=$(realpath -m "${1:?Usage: build-mrbc.sh INSTALL_DIR}")
-source_commit=a309524d0bc90eef077a24634db2495a6f68e318 # mruby 3.4.0
-source_sha=fe691f90225448c0bbb43deb304113d206138cf3f4a4690769962300c0995058
+source_commit=831da26b9021de0369d17b71b5667e2941a1a32d # mruby 4.0.0
+source_sha=e4fb1bbad8276878e84e3c3b6161ac35a4216853de404f8463675aa2d1920b4f
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 

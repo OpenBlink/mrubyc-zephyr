@@ -3,8 +3,9 @@
   console output module. (not yet input)
 
   <pre>
-  Copyright (C) 2015- Kyushu Institute of Technology.
-  Copyright (C) 2015- Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -82,7 +83,7 @@ void mrbc_snprintf(char *buf, int bufsiz, const char *fstr, ...);
 void mrbc_vprintf(const char *fstr, va_list ap);
 void mrbc_vasprintf(char **buf, int bufsiz, const char *fstr, va_list ap);
 void mrbc_p(const mrbc_value *v);
-void mrbc_char_to_s(char *buf, char ch);
+void mrbc_char_to_s(char *buf, const void *src);
 int mrbc_p_sub(const mrbc_value *v);
 int mrbc_puts_sub(const mrbc_value *v);
 int mrbc_print_sub(const mrbc_value *v);

@@ -3,8 +3,9 @@
   mruby/c value definitions
 
   <pre>
-  Copyright (C) 2015- Kyushu Institute of Technology.
-  Copyright (C) 2015- Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -32,6 +33,7 @@ extern "C" {
 /***** Typedefs *************************************************************/
 // pre define of some struct
 struct VM;
+struct RClass;
 struct RObject;
 
 // mrbc types
@@ -135,9 +137,14 @@ typedef enum {
 # define MRBC_INIT_OBJECT_HEADER(p, t)	(p)->obj_mark_[0] = (t)[0]; \
                                         (p)->obj_mark_[1] = (t)[1]; \
                                         (p)->ref_count = 1
+# define MRBC_INIT_OBJECT_HEADER_DI(t) \
+  .obj_mark_ = #t, \
+  .ref_count = 1,
+
 #else
 # define MRBC_OBJECT_HEADER  uint16_t ref_count
 # define MRBC_INIT_OBJECT_HEADER(p, t)  (p)->ref_count = 1
+# define MRBC_INIT_OBJECT_HEADER_DI(t)	.ref_count = 1,
 #endif
 
 
@@ -273,7 +280,7 @@ typedef struct RObject mrb_value;	// not recommended.
   (val).tt == MRBC_TT_FLOAT ? (mrbc_int_t)(val).d : 0
 #define MRBC_TO_FLOAT(val) \
   (val).tt == MRBC_TT_FLOAT ? (val).d : \
-  (val).tt == MRBC_TT_INTEGER ? (mrbc_float_t)(val).i : 0.0
+  (val).tt == MRBC_TT_INTEGER ? (mrbc_float_t)(val).i : (mrbc_float_t)0
 
 #endif  // !defined(MRBC_NOT_RECOMMEND_TO_USE)
 
@@ -541,7 +548,7 @@ static inline void mrbc_incref(mrbc_value *v)
   if( mrbc_type(*v) <= MRBC_TT_INC_DEC_THRESHOLD ) return;
 
   assert( v->obj->ref_count != 0 );
-  assert( v->obj->ref_count != 0xff );	// check max value.
+  assert( v->obj->ref_count != 0xffff );	// check max value.
   v->obj->ref_count++;
 }
 

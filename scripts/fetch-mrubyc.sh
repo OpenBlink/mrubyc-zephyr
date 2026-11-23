@@ -3,8 +3,8 @@
 set -euo pipefail
 
 archive=${1:?Usage: fetch-mrubyc.sh ARCHIVE_PATH}
-release=release3.4.1
-release_sha=6e039f3e4ad046c588fbb635cfbe6627ebff8f26cd39ffb32574ca6ef5b6ac46
+release=release4.0.0
+release_sha=1af3b87e8f143df6cb08858e2c640f996e927485611d972bb5590b69d646bc85
 
 if [[ ! -f "$archive" ]]; then
   curl --fail --silent --show-error --location --retry 3 \
