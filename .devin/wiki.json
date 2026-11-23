@@ -1,158 +1,508 @@
 {
   "repo_notes": [
     {
-      "content": "This repository is a self-contained west module that packages mruby/c release3.4.1 for Zephyr v3.7.2 LTS. vendor/mrubyc/src/ holds the unmodified upstream runtime; the integration code lives in zephyr/ (module.yml, Kconfig, CMakeLists.txt, hal/) and cmake/."
+      "content": "Write the public wiki in English for application developers and maintainers. Start each section with the reader's task or question, and link to the detailed child pages instead of repeating their configuration tables and procedures."
     },
     {
-      "content": "The Zephyr HAL is not part of the vendored release tarball: release3.4.1 ships no hal/zephyr/, so zephyr/hal/ is vendored separately from upstream commit 32b4ae7d and verified against that commit by scripts/check-vendor.sh."
+      "content": "Ground claims in the indexed revision and cite files and symbols. Use README.md for supported workflows, zephyr/Kconfig for options and defaults, vendor/mrubyc/src/VERSION for version identifiers, and vendor/mrubyc/src/load.c for the accepted RITE format. Verify that examples agree with those sources."
     },
     {
-      "content": "Toolchain contract: module tag v3.4.1 equals mruby/c release3.4.1 and requires mruby 3.4.0's mrbc (RITE0300). Zephyr SDK stays on 0.16.x (CI uses 0.16.9). The module requires a 32-bit little-endian single-core Zephyr build with multithreading and a system clock."
+      "content": "Use consistent names: mruby/c is the firmware runtime, mruby supplies the host-side mrbc compiler, and mrubyc-zephyr packages the runtime for Zephyr. Use the upstream release documentation for broader context and the vendored sources for behavior in this revision."
     },
     {
-      "content": "README.md is the only user-facing document; issues, pull requests, review comments, and code comments are written in English by repository policy."
+      "content": "Distinguish upstream mruby/c capabilities, modes exposed by this Zephyr integration, and configurations exercised by this repository's tests. Treat board support, Kconfig ranges, Ruby language compatibility, and test coverage as separate questions."
+    },
+    {
+      "content": "Identify the ownership boundary: vendor/mrubyc/src/ and zephyr/hal/ come from the upstream release. zephyr/Kconfig, zephyr/CMakeLists.txt, zephyr/fatal_hooks.h, cmake/, samples/, tests/, scripts/, and workflows are the integration surface."
+    },
+    {
+      "content": "Use source-linked diagrams where they clarify control or data flow. Show host versus firmware in the bytecode pipeline, the Zephyr thread versus Ruby tasks in the scheduler, and validation, CI, and approval in the release workflow."
+    },
+    {
+      "content": "For compatibility or security limitations, cite README.md and SECURITY.md. Describe the trusted-bytecode boundary, the impact on applications, and the private reporting path. Keep descriptions of security issues at the advisory and mitigation level."
+    },
+    {
+      "content": "Treat examples as revision-specific. Explain when a release tag in a west example must be available, distinguish board qualifiers in west build from platform names in Twister, and derive claims about CI, defaults, and released versions from their respective source or release records."
     }
   ],
   "pages": [
     {
-      "title": "What does this Zephyr module provide?",
-      "purpose": "Module composition: how west.yml, zephyr/module.yml, vendor/mrubyc, zephyr/, and cmake/ fit together to build mruby/c inside a Zephyr application, plus the platform constraints the Kconfig enforces.",
+      "title": "Getting Started with mruby/c on Zephyr",
+      "purpose": "Orient a reader choosing, installing, or embedding the module. Use README.md and point readers to the runtime, Zephyr integration, bytecode, and maintenance sections for implementation detail.",
+      "parent": null,
       "page_notes": [
         {
-          "content": "west.yml pins Zephyr v3.7.2 (clone-depth 1, cmsis name-allowlist) and places the module itself at modules/lib/mrubyc-zephyr, so this repository can also serve as a complete standalone workspace manifest."
+          "content": "Show the end-to-end flow from Ruby source to mrbc, the embedded C array, the application-owned memory pool, and Ruby tasks in a Zephyr thread."
         },
         {
-          "content": "zephyr/module.yml declares build.cmake: zephyr and kconfig: zephyr/Kconfig and registers samples/ and tests/ for Twister."
+          "content": "Describe the repository map and identify the host build, firmware integration, and application responsibilities."
         },
         {
-          "content": "zephyr/Kconfig gates everything on CONFIG_MRUBYC, which requires MULTITHREADING && SYS_CLOCK_EXISTS && !SMP && !BIG_ENDIAN && !64BIT."
-        },
-        {
-          "content": "The application supplies the memory pool and creates tasks; the module supplies the VM, the Zephyr HAL, and the compile-definition contract shared between them."
+          "content": "Offer two entry points: run the checked-in Hello sample first or add the module to an existing west application."
         }
       ]
     },
     {
-      "title": "How do I add the module and run Ruby bytecode?",
-      "purpose": "Consumption flow: the west manifest entry or EXTRA_ZEPHYR_MODULES, the required prj.conf symbols, bytecode header generation, and the mrbc_init/mrbc_create_task/mrbc_run lifecycle rules.",
-      "parent": "What does this Zephyr module provide?",
+      "title": "What Is mruby/c?",
+      "purpose": "Explain the embedded runtime, the role of Ruby bytecode, and how mruby/c, mruby, and mrbc relate.",
+      "parent": "Getting Started with mruby/c on Zephyr",
       "page_notes": [
         {
-          "content": "prj.conf needs CONFIG_MRUBYC=y plus CONFIG_PRINTK=y for console output. SYS_CLOCK_TICKS_PER_SEC should be a multiple of 1000 so one millisecond is an integer number of Zephyr ticks; with a coarser clock Zephyr rounds each 1 ms HAL period up, so Ruby sleep and scheduling take longer — the CMake file warns about this."
+          "content": "Explain why a firmware application can run Ruby using an embedded interpreter and a memory pool supplied by the application. Cite vendor/mrubyc/src/mrubyc.h and README.md."
         },
         {
-          "content": "The main() pattern: a static 8-aligned pool goes to mrbc_init (which starts the HAL timer), each bytecode array to mrbc_create_task, then mrbc_run. With SCHEDULER_EXIT=1 the scheduler returns once no runnable, waiting, or suspended tasks remain; the return value is 0 on a clean run and nonzero when execution stopped on a VM error such as bytecode the build cannot execute."
+          "content": "Describe mruby as the upstream source of the host compiler mrbc and mruby/c as the separate runtime consuming compiled bytecode. Use the version metadata to explain why the tool and runtime versions both matter."
         },
         {
-          "content": "The VM is single-threaded: access it from one Zephyr thread and let mruby/c schedule Ruby tasks inside it. Keep the pool and bytecode alive for the runtime's lifetime, and use bytecode built from trusted sources."
+          "content": "Use built-in classes and native C extensions as examples of the supported programming model. Refer to the embedded class library and compatibility pages for details of available methods and known limitations."
         }
       ]
     },
     {
-      "title": "How is Ruby source compiled into the build?",
-      "purpose": "The bytecode toolchain: building mrbc 3.4.0, the mrubyc_embed_script CMake helper, version and RITE signature verification, MRUBYC_MRBC, and the script-level checks.",
-      "parent": "What does this Zephyr module provide?",
+      "title": "Supported Targets and Toolchains",
+      "purpose": "Explain the supported Zephyr version, platform requirements, board identifiers, and host versus target build requirements.",
+      "parent": "Getting Started with mruby/c on Zephyr",
       "page_notes": [
         {
-          "content": "cmake/mrubyc.cmake's mrubyc_embed_script(target, symbol, source.rb) generates <symbol>.h in the build directory via a custom command that re-runs the same file in CMake script mode. It requires an existing target, CONFIG_MRUBYC=y, a valid unique C identifier per target (tracked in the MRUBYC_EMBEDDED_SYMBOLS property), and an existing .rb file."
+          "content": "Use west.yml, zephyr/Kconfig, and README.md for the Zephyr v3.7.2 LTS pin, CMSIS import, and 32-bit little-endian single-core gate with multithreading and a system clock."
         },
         {
-          "content": "The helper verifies the compiler is exactly the MRUBY_VERSION recorded in vendor/mrubyc/src/VERSION, and the script-mode pass checks the generated header actually starts with the RITE version parsed from load.c — output from the wrong compiler fails the build."
+          "content": "Show what native_sim/native needs on a 64-bit Linux host and what qemu_cortex_m3 needs from the Arm toolchain, Zephyr SDK, and QEMU. Distinguish local west board syntax from Twister platform names."
         },
         {
-          "content": "mrbc comes from PATH or -DMRUBYC_MRBC=<absolute path>. scripts/build-mrbc.sh builds mruby 3.4.0 from a pinned commit with a verified sha256, and scripts/check-bytecode.sh regenerates every sample header and diffs it against the committed copy."
+          "content": "Describe native_sim and qemu_cortex_m3 as the automated targets. Use the Kconfig gate to describe eligibility for other boards and the CI matrix to identify tested targets."
         }
       ]
     },
     {
-      "title": "Which Kconfig and CMake contracts exist?",
-      "purpose": "The CONFIG_MRUBYC_* option map, how zephyr/CMakeLists.txt exports it through the MRUBYC_API interface library, alignment handling for ARMv6-M and unaligned traps, and the libm edge case.",
-      "parent": "What does this Zephyr module provide?",
+      "title": "Run Hello and the Task Scheduling Sample",
+      "purpose": "Walk through the checked-in samples from west initialization to the console output their Twister harnesses assert.",
+      "parent": "Getting Started with mruby/c on Zephyr",
       "page_notes": [
         {
-          "content": "Options: MAX_VM_COUNT=5, MAX_REGS_SIZE=110, MAX_SYMBOLS_COUNT=255, FLOAT single/double (default double), USE_MATH (needs a libc that provides libm), USE_STRING_UTF8, USE_UNICODE_CASE (depends on UTF8), INT64, and SUPPORT_OP_EXT on by default."
+          "content": "Use README.md for sample build and run commands. Verify options against each sample's CMakeLists.txt and prj.conf."
         },
         {
-          "content": "zephyr/CMakeLists.txt defines the interface library MRUBYC_API carrying include directories and compile definitions; consumers link it with zephyr_library_link_libraries(MRUBYC_API) so application and runtime headers always agree on structure layout."
+          "content": "Trace samples/hello/hello.rb, its generated array, samples/hello/main.c, and the expected greeting followed by 'mruby/c finished'. Explain why building a checked-in sample requires no host bytecode generation."
         },
         {
-          "content": "On ARMv6-M/ARMv8-M baseline or CONFIG_TRAP_UNALIGNED_ACCESS it defines MRBC_REQUIRE_32BIT_ALIGNMENT because RITE bytecode contains halfwords and words at unaligned offsets; TRAP_UNALIGNED_ACCESS also adds -mno-unaligned-access."
-        },
-        {
-          "content": "USE_MATH adds _DEFAULT_SOURCE to c_math.c (M_E and M_PI are outside C99) and links libm only for native targets that do not already link it (CONFIG_NATIVE_LIBC && !CONFIG_NATIVE_LIBRARY). Single-precision float also demotes -Wdouble-promotion because upstream forwards floats to variadic functions."
+          "content": "Trace samples/vm_tasks/task_a.rb and task_b.rb. Explain the observed 'a:start', 'b:ran', 'a:done', and 'Scheduler returned 0' sequence using the Ruby sleep and the scheduler."
         }
       ]
     },
     {
-      "title": "How does the Zephyr HAL drive the scheduler?",
-      "purpose": "zephyr/hal/: the 1 ms k_timer calling mrbc_tick, nested IRQ and scheduler locking, printk-based console output, k_panic abort, and the compile-time defaults in hal.h.",
-      "parent": "What does this Zephyr module provide?",
+      "title": "Add the Module to a Zephyr Application",
+      "purpose": "Explain west manifest registration, local module discovery, and the application configuration required to use the runtime.",
+      "parent": "Getting Started with mruby/c on Zephyr",
       "page_notes": [
         {
-          "content": "hal.c's mrbc_hal_init starts a periodic k_timer with K_MSEC(MRBC_TICK_UNIT); the handler calls mrbc_tick(). mrbc_hal_idle_cpu() maps to k_msleep(MRBC_TICK_UNIT), or to sleep plus mrbc_tick() when MRBC_NO_TIMER is set."
+          "content": "Show the README.md manifest project entry with a pinned revision and west update. For a local checkout, explain EXTRA_ZEPHYR_MODULES."
         },
         {
-          "content": "hal.h defaults MRBC_TICK_UNIT to 1 ms and MRBC_TIMESLICE_TICK_COUNT to 10, and defaults MRBC_SCHEDULER_EXIT=1 so mrbc_run returns once tasks drain — it is declared before rrt0.c's own fallback so the Zephyr default wins."
+          "content": "Trace zephyr/module.yml to the CMake and Kconfig entry points. Show CONFIG_MRUBYC=y and explain the roles of CONFIG_PRINTK and the system clock rate."
         },
         {
-          "content": "IRQ control nests: mrbc_hal_disable_irq pairs irq_lock with k_sched_lock outside ISRs and unwinds on the last enable. mrbc_hal_write emits each byte through printk, and mrbc_hal_abort writes the message then calls k_panic() and k_fatal_halt(K_ERR_KERNEL_PANIC)."
-        },
-        {
-          "content": "hal.h keeps legacy compatibility macros (hal_init, hal_write, hal_abort, ...) mapped to the mrbc_hal_* names used by older mruby/c ports."
+          "content": "Separate module discovery errors from Kconfig dependency errors. Point readers to configuration and troubleshooting for how to inspect each."
         }
       ]
     },
     {
-      "title": "What do the samples and tests verify?",
-      "purpose": "samples/hello, samples/vm_tasks, tests/mrubyc (ztest), and tests/posix: what each proves and how Twister scenarios are declared in sample.yaml and testcase.yaml.",
-      "parent": "What does this Zephyr module provide?",
+      "title": "Initialize and Run Ruby from C",
+      "purpose": "Explain application ownership and the lifecycle from a bytecode array and aligned memory pool to the scheduler return.",
+      "parent": "Getting Started with mruby/c on Zephyr",
       "page_notes": [
         {
-          "content": "Samples use Twister's console regex harness on native_sim and qemu_cortex_m3: hello expects 'Hello from mruby/c on Zephyr!' then 'mruby/c finished'; vm_tasks expects the interleaved 'a:start', 'b:ran', 'a:done' then 'Scheduler returned 0'."
+          "content": "Use samples/hello/main.c and samples/vm_tasks/main.c for the order of mrbc_init, mrbc_create_task, and mrbc_run. Show the NULL return check on task creation."
         },
         {
-          "content": "tests/mrubyc asserts at build time that every CONFIG_MRUBYC_* equals the compiled definition, then at runtime that a RITE0400 header is rejected by the RITE0300 loader, a 20 ms sleep_ms finishes within measured bounds, and an OP_EXT-forcing script (more than 255 distinct literals) runs if and only if SUPPORT_OP_EXT is enabled."
+          "content": "Explain the required pool and bytecode storage lifetime, the need to size the pool and Zephyr thread stack separately, and why runtime calls remain on the designated Zephyr thread."
         },
         {
-          "content": "testcase.yaml variants: defaults (EXPECT_DEFAULTS=ON), no_op_ext (SUPPORT_OP_EXT=n), trap_unaligned (qemu_cortex_m3 only), and a custom configuration that sets non-default values for every option other than SUPPORT_OP_EXT."
-        },
-        {
-          "content": "tests/posix/main.c is compiled by scripts/posix-smoke.sh as a -m32 host binary against the upstream POSIX HAL extracted from the release tarball, asserting the same 'a:start','b:ran','a:done' schedule."
+          "content": "Show that mrbc_init also starts the HAL timer. Distinguish task creation, task completion, and returning from the scheduler using rrt0.c and README.md."
         }
       ]
     },
     {
-      "title": "How is the vendored upstream kept in sync?",
-      "purpose": "The integrity scripts: fetch-mrubyc.sh's pinned release and sha256, and check-vendor.sh's verification of the runtime diff, the exclusion list, SRCS parity with the upstream Makefile, and the HAL diff against upstream.",
-      "parent": "What does this Zephyr module provide?",
+      "title": "Inside the mruby/c Runtime",
+      "purpose": "Map the vendored runtime from bytecode loading to dispatch, values, libraries, symbols, and allocation.",
+      "parent": null,
       "page_notes": [
         {
-          "content": "scripts/fetch-mrubyc.sh downloads the release3.4.1 tarball and verifies it against a hardcoded SHA-256."
+          "content": "Use vendor/mrubyc/src/mrubyc.h as the entry point and group source files by the work they perform."
         },
         {
-          "content": "check-vendor.sh diffs vendored src/*.c, *.h, VERSION, and the licenses against the release archive. Every other file upstream ships in src/ must appear in a known_exclusions list (Makefile, UnicodeData.txt, hal_selector.mk); a new upstream file fails the check until a reviewer decides to vendor or exclude it."
+          "content": "Draw the flow from load.c to the IREP structures and VM registers, then to Ruby or C methods and the allocator."
         },
         {
-          "content": "The same script compares zephyr_library_sources with the upstream src/Makefile SRCS list, and diffs zephyr/hal/{hal.c,hal.h,LICENSE} against upstream commit 32b4ae7d — the commit where the Zephyr HAL first appeared, after release3.4.1."
-        },
-        {
-          "content": "These checks run in CI's 'Bundled source and bytecode' job together with check-bytecode.sh, so drift in the vendored runtime, the HAL, or the committed bytecode headers fails the build."
+          "content": "Use vendor/mrubyc/src/VERSION to anchor behavior to the bundled release and link to the Zephyr port for platform-specific execution."
         }
       ]
     },
     {
-      "title": "How do CI and releases work?",
-      "purpose": "ci.yml's Twister, bytecode, POSIX smoke, and workflow-validation jobs, and release.yml's tag validation, environment policy check, and gated GitHub release.",
-      "parent": "What does this Zephyr module provide?",
+      "title": "Bytecode Loader and VM Dispatch",
+      "purpose": "Trace accepted bytecode into IREP structures and the register-based instruction dispatch loop.",
+      "parent": "Inside the mruby/c Runtime",
       "page_notes": [
         {
-          "content": "ci.yml runs Twister on native_sim (host toolchain, gcc-multilib) and qemu_cortex_m3 (Zephyr toolchain, SDK 0.16.9 installed by scripts/setup-zephyr-sdk.sh with sha256-checked downloads), caching west projects, SDK archives, and ccache."
+          "content": "Use vendor/mrubyc/src/load.c and load.h to explain the RITE and IREP layers and what lives in the firmware byte array versus runtime state."
         },
         {
-          "content": "The composite action .github/actions/setup-mrbc builds and caches mrbc, then verifies it by regenerating the sample bytecode headers via scripts/check-bytecode.sh. A separate 'workflows' job runs actionlint (pinned tarball plus sha256, with .github/actionlint.yaml registering the ubuntu-26.04 label) and shellcheck over scripts/."
+          "content": "Use vendor/mrubyc/src/vm.h, vm.c, and opcode.h to explain register windows, call information, VM execution status, and how MRBC_SUPPORT_OP_EXT changes operand decoding."
         },
         {
-          "content": "release.yml on v* tags first verifies the tag equals the vendored MRUBYC_VERSION and is an ancestor of main, and that the production environment requires reviewers and allows v* tags; it then reuses ci.yml via workflow_call and publishes the GitHub release under the production environment."
+          "content": "Describe where exception state and the scheduler's preemption flag affect VM execution. Link to the format and known limitations pages for version matching and compatibility."
+        }
+      ]
+    },
+    {
+      "title": "Ruby Values, Numeric Types, and References",
+      "purpose": "Explain how mrbc_value represents immediate values and heap-backed objects, and why its C layout matters to extensions.",
+      "parent": "Inside the mruby/c Runtime",
+      "page_notes": [
+        {
+          "content": "Start with vendor/mrubyc/src/value.h, boxing_no.h, and value.c. Show the relationship between a value's type, its payload, and the mrbc_type or typed accessors."
+        },
+        {
+          "content": "Use c_numeric.c and the relevant Kconfig settings to explain the default integer width, the INT64 alternative, and single- versus double-precision Float."
+        },
+        {
+          "content": "Describe reference counting and pointer lifetime for heap-backed values. Refer to the C binding and configuration pages for argument ownership rules and the upstream representation alternatives that are outside the module's configuration."
+        }
+      ]
+    },
+    {
+      "title": "Built-in Classes and the Embedded Ruby Library",
+      "purpose": "Map Ruby features to the vendored C implementations, generated method tables, and mrblib.c.",
+      "parent": "Inside the mruby/c Runtime",
+      "page_notes": [
+        {
+          "content": "Use class.c, the c_*.c source files, and the _autogen_class_*.h tables to show how built-in classes and their method entries are registered."
+        },
+        {
+          "content": "Explain the role of the precompiled Ruby methods in vendor/mrubyc/src/mrblib.c alongside the C implementations. Link to the upstream release for the source of the Ruby library."
+        },
+        {
+          "content": "Map common questions about Array, Hash, String, Integer, Float, Range, Proc, and Math to their source. For String, distinguish byte indexing, optional UTF-8 indexing, and optional Unicode BMP case conversion."
+        }
+      ]
+    },
+    {
+      "title": "Symbols, Variables, and Method Lookup",
+      "purpose": "Explain the distinct uses of built-in symbols, runtime-interned symbols, lookup tables, and class or variable storage.",
+      "parent": "Inside the mruby/c Runtime",
+      "page_notes": [
+        {
+          "content": "Use symbol.c and _autogen_builtin_symbol.h to distinguish built-in symbol IDs from the dynamic symbol table and its configurable capacity."
+        },
+        {
+          "content": "Explain how MRBC_SYMBOL_SEARCH_LINEAR selects linear lookup and how the upstream default selects a binary tree. Cite symbol.c for lookup and existing tests for registration and reverse lookup."
+        },
+        {
+          "content": "Use class.c, global.c, and keyvalue.c to illustrate method lookup, constants and globals, and the capacity and growth of instance-variable storage. Distinguish these tables from the global symbol table."
+        }
+      ]
+    },
+    {
+      "title": "Memory Pool, Allocation, and Profiling",
+      "purpose": "Explain the application's pool, runtime allocation paths, memory accounting, and the available measurement APIs.",
+      "parent": "Inside the mruby/c Runtime",
+      "page_notes": [
+        {
+          "content": "Use alloc.c, alloc.h, and vm_config.h for pool initialization, the upstream MRBC_ALLOC_24BIT mode and its effective 32-bit size field with VM ID tracking disabled, and free-block size classes."
+        },
+        {
+          "content": "Distinguish instantaneous mrbc_alloc_statistics from optional profiling. Note that persistent allocations made at the pool tail appear in the next ordinary allocation or release sample."
+        },
+        {
+          "content": "Tie memory sizing to task/register and object demand, and explain the standard allocation-failure behavior. Send readers to the fatal policy page for Zephyr panic and optional statistics."
+        }
+      ]
+    },
+    {
+      "title": "Zephyr Integration and Configuration",
+      "purpose": "Describe how the runtime is built into a Zephyr image and where the application, scheduler, kernel, and HAL interact.",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "Follow Zephyr module discovery through zephyr/module.yml to zephyr/Kconfig and zephyr/CMakeLists.txt and show where the official HAL is compiled."
+        },
+        {
+          "content": "Explain the shared MRUBYC_API interface for the runtime and application while identifying the fatal policy header as a runtime-only inclusion."
+        },
+        {
+          "content": "Guide readers to the C bindings, scheduler, HAL, configuration reference, or fatal policies depending on what they need to change."
+        }
+      ]
+    },
+    {
+      "title": "C Extensions and the Public API Contract",
+      "purpose": "Explain how a Zephyr library registers a Ruby-callable C method and shares the runtime's compile-time ABI.",
+      "parent": "Zephyr Integration and Configuration",
+      "page_notes": [
+        {
+          "content": "Use class.h, class.c, and value.h to describe mrbc_define_class, mrbc_define_method, mrbc_func_t, argument access, and returning a value. Ground ownership examples in real call sites."
+        },
+        {
+          "content": "Describe class layout and mrbc_define_destructor under MRBC_INSTANCE_DESTRUCTOR and the macro-controlled value, exception, and task layouts."
+        },
+        {
+          "content": "Show how APP_LINK_WITH_MRUBYC_API links the application automatically and how another Zephyr library uses zephyr_library_link_libraries(MRUBYC_API). Cite tests/mrubyc/main.c for compile-time agreement checks."
+        }
+      ]
+    },
+    {
+      "title": "Ruby Tasks and Scheduling",
+      "purpose": "Describe one Zephyr thread running multiple Ruby tasks, task queues, the scheduler loop, and sleep and join behavior.",
+      "parent": "Zephyr Integration and Configuration",
+      "page_notes": [
+        {
+          "content": "Use rrt0.h and rrt0.c to map dormant, ready, running, waiting, and suspended states, and show the role of the task control block and its VM."
+        },
+        {
+          "content": "Trace mrbc_tick, time-slice consumption, wakeups, mrbc_vm_run, and scheduler return or idle when tasks drain. Use samples/vm_tasks for a concrete scheduling example."
+        },
+        {
+          "content": "Explain that Ruby Task.create retains its VM when the task stops. Relate that lifecycle to joining and to the distinct fatal exception behavior."
+        }
+      ]
+    },
+    {
+      "title": "Zephyr HAL, Timer, and Console",
+      "purpose": "Trace the HAL from its Zephyr timer and nested critical sections to console output and abort.",
+      "parent": "Zephyr Integration and Configuration",
+      "page_notes": [
+        {
+          "content": "Use zephyr/hal/hal.c, hal.h, and rrt0.c to draw k_timer to mrbc_tick. Explain how the configured period interacts with the Zephyr system clock and delays."
+        },
+        {
+          "content": "Describe how nested IRQ locking takes a Zephyr scheduler lock outside ISR context and releases both locks at the outermost unwind. Explain the module's single-core assumptions from Kconfig."
+        },
+        {
+          "content": "Trace mrbc_hal_write through printk and mrubyc's CRLF path through console.c. Explain the UART console dependency and point to the fatal policy page for mrbc_hal_abort."
+        }
+      ]
+    },
+    {
+      "title": "Kconfig Defaults, Dependencies, and Fixed Modes",
+      "purpose": "Provide an exhaustive reference for this revision's Zephyr Kconfig declarations and the main upstream settings that are fixed or derived.",
+      "parent": "Zephyr Integration and Configuration",
+      "page_notes": [
+        {
+          "content": "Read every declaration in zephyr/Kconfig, including the module gate, the hidden application link symbol, and both Float alternatives. Give each prompt's Kconfig name, default, range or dependency, and resulting macro or action from zephyr/CMakeLists.txt and zephyr/fatal_hooks.h."
+        },
+        {
+          "content": "Group by VM capacities, language and class options, key-value storage, scheduler, and diagnostics. Compare with upstream defaults in vm_config.h and hal.h, including the module's choice to enable extended operands."
+        },
+        {
+          "content": "Use README.md and upstream sources to explain fixed, derived, or unavailable modes, including String and Float disablement, narrower integers, alternative allocators, NaN boxing, software ticks, and alignment. Mark generated tables and compiler flags where applicable."
+        }
+      ]
+    },
+    {
+      "title": "Out-of-Memory and Unhandled Exception Policies",
+      "purpose": "Explain both fatal hooks, their Kconfig controls, defaults, scope, and the scenario tests that support each claim.",
+      "parent": "Zephyr Integration and Configuration",
+      "page_notes": [
+        {
+          "content": "Trace MRBC_OUT_OF_MEMORY() from mrbc_raw_alloc to mrbc_hal_abort and k_panic. Describe how CONFIG_MRUBYC_OOM_POOL_STATS enables pool usage output and uses PRINTK."
+        },
+        {
+          "content": "Trace MRBC_ABORT_BY_EXCEPTION(vm) in mrbc_vm_end. Describe the default reporting and scheduler result, the opt-in Zephyr panic, and how rescue continues to handle ordinary Ruby exceptions."
+        },
+        {
+          "content": "Use rrt0.c and tests/fatal_hooks to explain why Ruby Task.create tasks skip the VM shutdown hook when they stop. Cover the test assertions for both OOM output modes, both exception policies, and the dynamic task."
+        }
+      ]
+    },
+    {
+      "title": "Bytecode Build and Compatibility",
+      "purpose": "Describe the contract from the host compiler to embedded RITE bytecode and organize the build and migration paths.",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "Draw the Ruby source, host mrbc, generated header, compiler/linker, and firmware loader flow. Identify the interface checked at each step."
+        },
+        {
+          "content": "Distinguish checked-in sample headers from automatically generated application headers and show where to find the instructions for both."
+        },
+        {
+          "content": "Tie runtime or compiler upgrades to bytecode regeneration, a clean firmware build, and behavior checks for the exact application configuration."
+        }
+      ]
+    },
+    {
+      "title": "RITE Versions, Byte Order, and Alignment",
+      "purpose": "Explain the runtime's accepted RITE signature and how the loader reads encoded values on supported target architectures.",
+      "parent": "Bytecode Build and Compatibility",
+      "page_notes": [
+        {
+          "content": "Use vendor/mrubyc/src/load.c and cmake/mrubyc.cmake to explain the RITE0400 requirement for the current runtime and contrast the older RITE0300 fixture rejected by tests/mrubyc."
+        },
+        {
+          "content": "Use value.h, vm_config.h, and zephyr/CMakeLists.txt to distinguish little-endian targets from the requirements for safe reads of unaligned multibyte fields."
+        },
+        {
+          "content": "Describe the MRBC_REQUIRE_32BIT_ALIGNMENT rule for ARM Baseline or CONFIG_TRAP_UNALIGNED_ACCESS, the compiler option for strict traps, and upstream's 64-bit read policy. Use the Cortex-M3 trap scenario as evidence."
+        }
+      ]
+    },
+    {
+      "title": "Embed Ruby Scripts with CMake",
+      "purpose": "Document the mrubyc_embed_script application interface and how CMake generates, verifies, and publishes the C header.",
+      "parent": "Bytecode Build and Compatibility",
+      "page_notes": [
+        {
+          "content": "Show the helper included after find_package(Zephyr), an existing target, CONFIG_MRUBYC=y, an existing .rb path and a unique C symbol per target."
+        },
+        {
+          "content": "Explain the per-target output directory, compiler and source dependency tracking, and the temporary output renamed after the expected RITE prefix is verified."
+        },
+        {
+          "content": "Use cmake/mrubyc.cmake to explain host compiler discovery via PATH or an absolute MRUBYC_MRBC path. Distinguish version errors at configuration from script or output-signature errors at build time."
+        }
+      ]
+    },
+    {
+      "title": "Build and Pin the Host mrbc Compiler",
+      "purpose": "Explain where the pinned host compiler comes from, how it is verified, and what its header generation flags do.",
+      "parent": "Bytecode Build and Compatibility",
+      "page_notes": [
+        {
+          "content": "Read scripts/build-mrbc.sh and .github/actions/setup-mrbc/action.yml for the pinned source revision, checksum, build, and cache. Use vendor/mrubyc/src/VERSION to explain the exact compiler version expected by the helper."
+        },
+        {
+          "content": "Explain mrbc -B for a named C array and --remove-lv for omitting local variable name metadata. Headers may stay the same size when the input has no removable LVAR section."
+        },
+        {
+          "content": "Use scripts/check-bytecode.sh and the three sample headers to show how committed output is regenerated and checked. Link to the CMake page for generation inside an application build."
+        }
+      ]
+    },
+    {
+      "title": "Upgrade from v3.4.1 to v4.0.0",
+      "purpose": "Give a release-to-release checklist for the module, compiler, bytecode artifacts, C API changes, and rollback.",
+      "parent": "Bytecode Build and Compatibility",
+      "page_notes": [
+        {
+          "content": "Use README.md and vendor/mrubyc/src/VERSION to document the 3.4.1 and 4.0.0 module, compiler, and RITE pairs. Instruct readers to recompile every application script and clean-build the firmware after updating the west pin."
+        },
+        {
+          "content": "Point out the mrbc_find_method return type change identified in README.md and direct C binding authors to class.h for the current signature."
+        },
+        {
+          "content": "For rollback, restore the previous west pin, rebuild bytecode with its matching compiler, and repeat the clean firmware build. Link to known limitations to guide application-level regression checks."
+        }
+      ]
+    },
+    {
+      "title": "Runtime Compatibility and Trusted Bytecode",
+      "purpose": "Summarize the documented application compatibility limits of the bundled runtime and explain the trusted-input boundary.",
+      "parent": "Bytecode Build and Compatibility",
+      "page_notes": [
+        {
+          "content": "Use README.md for the known language behavior and recommend exercising application scripts with the pinned compiler and the same runtime settings. Avoid claiming full Ruby or upstream feature coverage from the success of one fixture."
+        },
+        {
+          "content": "Explain that matching the RITE version establishes a format contract. Only compile and embed bytecode from trusted sources, and refer readers to the advisory linked in README.md."
+        },
+        {
+          "content": "Use SECURITY.md for private reporting. Keep security guidance focused on applicable versions, impact, trusted input, and the reporting channel."
+        }
+      ]
+    },
+    {
+      "title": "Testing, CI, and Maintenance",
+      "purpose": "Guide maintainers through executable evidence, upstream synchronization, release automation, and diagnosis.",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "Separate checked-in fixture tests, source and artifact verification, and GitHub workflow checks. Point each claim about support to the workflow or test that covers it."
+        },
+        {
+          "content": "Use a maintenance checklist from changing dependencies or the vendor bundle through local checks, CI, release validation, and post-release sample verification."
+        },
+        {
+          "content": "Provide links to the maintained workflow and script entry points so current pins, permissions, and job definitions govern future updates."
+        }
+      ]
+    },
+    {
+      "title": "Twister, Integration Tests, and POSIX Smoke",
+      "purpose": "Explain how to run the repository tests and what each automated scenario verifies.",
+      "parent": "Testing, CI, and Maintenance",
+      "page_notes": [
+        {
+          "content": "Use the sample.yaml files and tests/mrubyc/testcase.yaml to map sample output, defaults, custom configuration, OP_EXT, strict alignment, scheduler idle, and diagnostics to the platforms on which they run."
+        },
+        {
+          "content": "Describe the assertions that check Kconfig propagation, version rejection, pattern matching, timer behavior, and C extension behavior. Link to tests/fatal_hooks/testcase.yaml for the five console harness cases and their expectations."
+        },
+        {
+          "content": "Use scripts/posix-smoke.sh and tests/posix/main.c for the 32-bit host test against the official POSIX HAL. Distinguish this integration smoke test from the upstream Ruby test suite and physical-board testing."
+        }
+      ]
+    },
+    {
+      "title": "Vendor Provenance and Update Checks",
+      "purpose": "Describe the source-of-truth archive, generated upstream files, license handling, and the vendor update invariants.",
+      "parent": "Testing, CI, and Maintenance",
+      "page_notes": [
+        {
+          "content": "Use scripts/fetch-mrubyc.sh and scripts/check-vendor.sh for the release archive and SHA-256, then the byte-for-byte comparison of runtime, generated sources and headers, VERSION, licenses, and official Zephyr HAL."
+        },
+        {
+          "content": "Explain the upstream source-file exclusion list and compare the upstream Makefile's SRCS with zephyr_library_sources. Describe why an added upstream file requires a maintainer decision."
+        },
+        {
+          "content": "Give the order for a future update: check the upstream release and licenses, synchronize the files and source list, align mrbc and regenerate the headers, then run vendor, bytecode, and runtime checks."
+        }
+      ]
+    },
+    {
+      "title": "GitHub Actions, Caches, and Dependency Updates",
+      "purpose": "Explain the CI job matrix, cache boundaries, toolchain verification, and automated dependency maintenance.",
+      "parent": "Testing, CI, and Maintenance",
+      "page_notes": [
+        {
+          "content": "Use .github/workflows/ci.yml for the parallel board jobs and the separate bundled-source, POSIX smoke, and workflow-validation jobs. Describe what the Twister artifact contains for later diagnosis."
+        },
+        {
+          "content": "Trace the west project, SDK archive, compiler, and mrbc cache keys to their inputs. Use scripts/setup-zephyr-sdk.sh and .github/actions/setup-mrbc/action.yml for how pinned tools are installed and checked."
+        },
+        {
+          "content": "Use .github/dependabot.yml, .github/workflows/security.yml, and .github/workflows/scorecard.yml to explain update cadence and the distinct dependency, code, and repository checks."
+        }
+      ]
+    },
+    {
+      "title": "Release Tags and Production Approval",
+      "purpose": "Trace the tag-triggered GitHub Release from candidate commit and policy validation through shared CI and a production approval.",
+      "parent": "Testing, CI, and Maintenance",
+      "page_notes": [
+        {
+          "content": "Use .github/workflows/release.yml to explain why the tag must match MRUBYC_VERSION and point to a commit contained in main. Describe how the workflow checks production reviewers and the v* tag policy."
+        },
+        {
+          "content": "Show validation, reusable CI on the tagged source, and publication by a production-gated job with release-write permission. Use the workflow as the source for generated release note behavior."
+        },
+        {
+          "content": "Explain how to check the published tag, release page, and clean west sample build from the published revision. Use GitHub release records to distinguish an example tag from an existing published release."
+        }
+      ]
+    },
+    {
+      "title": "Troubleshoot Build and Runtime Problems",
+      "purpose": "Provide a symptom-driven path through module discovery, compiler checks, target constraints, scheduling, console output, and memory use.",
+      "parent": "Testing, CI, and Maintenance",
+      "page_notes": [
+        {
+          "content": "For a missing module or unavailable Kconfig option, check west list, zephyr/module.yml, the platform gate, and the build's resolved .config. For an embedding failure, check mrbc --version and the configured host executable."
+        },
+        {
+          "content": "For silent or duplicated output, check PRINTK, the console backend, UART CRLF, NO_STDIO, and the sample's expected output. For slow sleep, compare the configured mruby/c period with the Zephyr tick rate."
+        },
+        {
+          "content": "For memory or task failures, start with the aligned pool size, task creation result, scheduler return, and fatal hook output. Ask reporters for the module revision, Zephyr version, board, compiler version, and relevant Kconfig values."
         }
       ]
     }

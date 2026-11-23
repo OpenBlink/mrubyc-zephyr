@@ -1,0 +1,53 @@
+common:
+  tags: mrubyc
+  harness: console
+  ignore_faults: true
+  platform_allow: [native_sim, qemu_cortex_m3]
+  timeout: 10
+tests:
+  mrubyc.fatal_hooks.oom_default:
+    extra_args: TRIGGER_OOM=ON
+    harness_config:
+      type: multi_line
+      regex:
+        - 'Fatal error: Out of memory\.'
+        - 'Pool statistics printed: no'
+        - 'Caught Zephyr kernel panic'
+  mrubyc.fatal_hooks.oom_pool_stats:
+    extra_args: TRIGGER_OOM=ON
+    extra_configs:
+      - CONFIG_MRUBYC_OOM_POOL_STATS=y
+      - CONFIG_MRUBYC_INT64=y
+    harness_config:
+      type: multi_line
+      regex:
+        - 'mruby/c pool: total=16384 used=[0-9]+ free=[0-9]+ bytes'
+        - 'Fatal error: Out of memory\.'
+        - 'Pool statistics printed: yes'
+        - 'Caught Zephyr kernel panic'
+  mrubyc.fatal_hooks.exception_default:
+    harness_config:
+      type: multi_line
+      regex:
+        - 'Rescued exception'
+        - 'unhandled test exception'
+        - 'Scheduler returned the unhandled exception status'
+  mrubyc.fatal_hooks.panic_on_exception:
+    extra_configs:
+      - CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION=y
+    harness_config:
+      type: multi_line
+      regex:
+        - 'Rescued exception'
+        - 'unhandled test exception'
+        - 'Caught Zephyr kernel panic'
+  mrubyc.fatal_hooks.dynamic_task_exception:
+    extra_args: USE_DYNAMIC_TASK=ON
+    extra_configs:
+      - CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION=y
+    harness_config:
+      type: multi_line
+      regex:
+        - 'Rescued exception'
+        - 'Dynamic task joined'
+        - 'Scheduler returned the unhandled exception status'

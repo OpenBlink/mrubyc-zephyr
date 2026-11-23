@@ -13,6 +13,20 @@ config APP_LINK_WITH_MRUBYC_API
 	bool
 	default y
 
+config MRUBYC_ALLOC_PROFILING
+	bool "Memory pool profiling"
+	help
+	  Enable the mrbc_alloc_*_profiling() API. Ordinary allocations and
+	  releases sample pool usage. Persistent allocations made at the pool
+	  tail are reflected in the next sample.
+
+config MRUBYC_OOM_POOL_STATS
+	bool "Report mruby/c pool statistics on allocation failure"
+	depends on PRINTK
+	help
+	  Print total, used, and free pool bytes before invoking the Zephyr
+	  kernel panic. Otherwise the allocator prints only the error.
+
 config MRUBYC_MAX_VM_COUNT
 	int "Maximum simultaneous VMs"
 	range 1 255
@@ -27,6 +41,12 @@ config MRUBYC_MAX_SYMBOLS_COUNT
 	int "Dynamic symbol table capacity"
 	range 32 32512
 	default 255
+
+config MRUBYC_SYMBOL_SEARCH_LINEAR
+	bool "Use linear search for dynamic symbols"
+	help
+	  Use linear search instead of the default binary tree. This saves
+	  table storage, with slower lookups as the table grows.
 
 choice MRUBYC_FLOAT
 	prompt "Ruby Float representation"
@@ -63,5 +83,115 @@ config MRUBYC_INT64
 config MRUBYC_SUPPORT_OP_EXT
 	bool "Extended bytecode operands"
 	default y
+
+config MRUBYC_INSTANCE_DESTRUCTOR
+	bool "C instance destructor callbacks"
+	default y
+	help
+	  Allow extensions to register instance destructors through
+	  mrbc_define_destructor(). Disabling this changes the class layout
+	  and removes the registration API.
+
+config MRUBYC_EXCEPTION_CALL_NEST_LEVEL
+	int "Maximum recorded exception frames"
+	range 1 64
+	default 8
+	help
+	  Number of call frames stored per exception for diagnostic output.
+
+config MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION
+	bool "Panic on an unhandled Ruby exception at VM shutdown"
+	help
+	  Print the exception when the VM ends and invoke a Zephyr kernel
+	  panic. By default, the VM prints the exception and finishes its
+	  own shutdown while the scheduler can continue running other tasks.
+	  Ruby Task.create tasks retain their VMs when they stop and do not
+	  invoke the shutdown hook.
+
+config MRUBYC_TASK_NAME_LEN
+	int "Maximum task name length in bytes"
+	range 1 255
+	default 15
+	help
+	  Task names longer than this limit are truncated. The task control
+	  block also reserves one byte for the terminating NUL.
+
+config MRUBYC_KV_SIZE_INIT
+	int "Initial key-value table capacity"
+	range 1 64
+	default 2
+	help
+	  Number of entries reserved when an empty key-value table first
+	  needs storage, for example when setting an instance variable.
+
+config MRUBYC_KV_SIZE_INCREMENT
+	int "Key-value table growth increment"
+	range 1 64
+	default 5
+	help
+	  Number of extra entries to allocate when a key-value table fills.
+
+config MRUBYC_NO_STDIO
+	bool "Omit Ruby console methods"
+	help
+	  Omit p, print, puts, and printf. Keep sprintf for string formatting.
+	  The HAL can still write runtime diagnostics.
+
+config MRUBYC_CONVERT_CRLF
+	bool "Convert console line feeds to CRLF in mruby/c"
+	depends on !UART_CONSOLE
+	help
+	  Enable when the console expects CRLF and passes it through.
+	  Zephyr's UART console already inserts carriage returns.
+
+config MRUBYC_DEBUG_REGS
+	bool "Log VM register usage on exit"
+	help
+	  Print register usage when a VM finishes.
+
+config MRUBYC_DISABLE_LEGACY_VALUE_MACROS
+	bool "Omit legacy C value macros"
+	help
+	  Hide legacy C value macros such as GET_INT_ARG and MRBC_TO_INT.
+	  Use the mrbc_value accessors in C extensions.
+
+config MRUBYC_TICK_UNIT_MS
+	int "mruby/c timer period in milliseconds"
+	range 1 10
+	default 1
+	help
+	  Sets the scheduling and Ruby sleep resolution. Choose a period
+	  that is an exact multiple of the Zephyr system clock tick.
+
+config MRUBYC_TIMESLICE_TICK_COUNT
+	int "Scheduler time slice in mruby/c ticks"
+	range 1 255
+	default 10
+	help
+	  Number of mruby/c ticks in a time slice. The time slice in
+	  milliseconds is this value times the mruby/c timer period.
+
+config MRUBYC_SCHEDULER_EXIT
+	bool "Return from mrbc_run() when tasks drain"
+	default y
+	help
+	  Return when there are no runnable, waiting, or suspended Ruby
+	  tasks. Disable to keep the scheduler thread idle in that state.
+
+menu "Unavailable modes and fixed settings in mruby/c 4.0.0"
+
+comment "Disable Float (MRBC_USE_FLOAT=0)"
+comment "Disable String (MRBC_USE_STRING=0)"
+comment "String length (MRBC_STRING_SIZE_T): fixed at 16 bits"
+comment "16-bit integers (MRBC_INT16)"
+comment "NaN boxing (MRBC_NAN_BOXING)"
+comment "Pool format (MRBC_ALLOC_24BIT): fixed"
+comment "16-bit pool (MRBC_ALLOC_16BIT)"
+comment "libc allocator (MRBC_ALLOC_LIBC)"
+comment "Allocator VM ID tracking (MRBC_ALLOC_VMID)"
+comment "Software ticks (MRBC_NO_TIMER)"
+comment "Byte order (MRBC_LITTLE_ENDIAN): fixed, MRBC_BIG_ENDIAN unavailable"
+
+endmenu
 
 endif # MRUBYC

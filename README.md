@@ -58,9 +58,10 @@ CONFIG_PRINTK=y
 CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000
 ~~~
 
-`CONFIG_PRINTK` enables Ruby console output. Set the system clock rate so one
-millisecond is an integer number of Zephyr ticks. With a coarser clock, Zephyr
-rounds up each mruby/c timer period, so Ruby sleep and scheduling take longer.
+`CONFIG_PRINTK` enables Ruby console output. Set the system clock rate so the
+configured mruby/c timer period is an integer number of Zephyr ticks. With a
+coarser clock, Zephyr rounds up the period, so Ruby sleep and scheduling take
+longer.
 
 ## Run your own Ruby code
 
@@ -99,12 +100,12 @@ int main(void)
 }
 ~~~
 
-`mrbc_init()` starts the HAL timer. Keep the pool and bytecode alive for the
-lifetime of the runtime, and access the VM from one Zephyr thread. Ruby tasks
-share that thread and are scheduled by mruby/c. The scheduler returns when
-there are no runnable, waiting, or suspended tasks. Size the pool and the
-Zephyr thread stack for your application. Use bytecode built from sources you
-trust and recompile those sources when changing bytecode versions.
+`mrbc_init()` starts the HAL timer. Keep the pool
+and bytecode alive for the lifetime of the runtime, and access the VM from
+one Zephyr thread. Ruby tasks share that thread and are scheduled by mruby/c.
+By default, the scheduler returns when there are no runnable, waiting, or
+suspended tasks.
+Size the pool and the Zephyr thread stack for your application.
 
 For build-time generation, include the helper after `find_package(Zephyr)`.
 If needed, pass `-DMRUBYC_MRBC=/absolute/path/to/mrbc` to CMake.
@@ -130,27 +131,123 @@ Use a distinct C identifier for each bytecode array linked into your application
 To return to v3.4.1, pin that revision and regenerate the application
 bytecode with mrbc 3.4.0 before rebuilding.
 
+## Known limitations
+
+Build and embed bytecode from trusted sources. The bundled upstream runtime
+contains [CVE-2026-86547](https://www.cve.org/CVERecord?id=CVE-2026-86547).
+Malformed bytecode can crash the VM. Keep externally supplied bytecode out of
+the runtime, even if it has the expected RITE version.
+
+In upstream 4.0.0, method arguments can be lost inside `ensure` when returning
+from a method. The default integer configuration can also reject a literal
+`-2147483648` compiled by mrbc 4.0.0. Qualification also found incorrect
+results with overloaded `+=` and `-=`, mixed-type Integer addition and
+subtraction, and Array slices with extreme Range endpoints. Exercise
+application scripts with the compiler and Kconfig settings used in the
+firmware.
+
 ## Configuration
 
 | Kconfig option | Default | Purpose |
 | --- | --- | --- |
 | `CONFIG_MRUBYC` | `n` | Build the module. |
+| `CONFIG_MRUBYC_ALLOC_PROFILING` | `n` | Enable the pool allocator's `mrbc_alloc_*_profiling()` API. |
+| `CONFIG_MRUBYC_OOM_POOL_STATS` | `n` | Print pool usage before the existing kernel panic on allocation failure. Requires `CONFIG_PRINTK=y`. |
 | `CONFIG_MRUBYC_MAX_VM_COUNT` | `5` | Maximum number of VM instances. |
 | `CONFIG_MRUBYC_MAX_REGS_SIZE` | `110` | Default register capacity per VM. |
 | `CONFIG_MRUBYC_MAX_SYMBOLS_COUNT` | `255` | Dynamic symbol table capacity. |
+| `CONFIG_MRUBYC_SYMBOL_SEARCH_LINEAR` | `n` | Use a smaller linear lookup table for dynamic symbols. The default uses a binary tree. |
 | `CONFIG_MRUBYC_FLOAT_{SINGLE,DOUBLE}` | `DOUBLE` | Float representation. |
 | `CONFIG_MRUBYC_USE_MATH` | `n` | Enable the Math module with Float and a C library that provides its math functions. |
 | `CONFIG_MRUBYC_USE_STRING_UTF8` | `n` | Use UTF-8 character indexing in supported String methods. |
 | `CONFIG_MRUBYC_USE_UNICODE_CASE` | `n` | Add Unicode BMP case conversion when UTF-8 is enabled. |
 | `CONFIG_MRUBYC_INT64` | `n` | Use 64-bit Ruby integers. |
 | `CONFIG_MRUBYC_SUPPORT_OP_EXT` | `y` | Enable extended bytecode operands (`MRBC_SUPPORT_OP_EXT=1`). |
+| `CONFIG_MRUBYC_INSTANCE_DESTRUCTOR` | `y` | Allow C extensions to register instance destructor callbacks. |
+| `CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL` | `8` | Record up to this many call frames per exception (1–64). |
+| `CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION` | `n` | Panic the Zephyr kernel on an unhandled exception at VM shutdown. Ruby `Task.create` tasks retain their VMs when they stop. |
+| `CONFIG_MRUBYC_TASK_NAME_LEN` | `15` | Maximum task name length in bytes, excluding the terminating NUL (1–255). |
+| `CONFIG_MRUBYC_KV_SIZE_INIT` | `2` | Initial key-value table capacity (1–64). |
+| `CONFIG_MRUBYC_KV_SIZE_INCREMENT` | `5` | Entries added when a key-value table fills (1–64). |
+| `CONFIG_MRUBYC_NO_STDIO` | `n` | Omit Ruby `p`, `print`, `puts`, and `printf`. |
+| `CONFIG_MRUBYC_CONVERT_CRLF` | `n` | Convert LF to CRLF in mruby/c console output when Zephyr's UART console is disabled. |
+| `CONFIG_MRUBYC_DEBUG_REGS` | `n` | Print VM register usage when a VM finishes. |
+| `CONFIG_MRUBYC_DISABLE_LEGACY_VALUE_MACROS` | `n` | Omit legacy C value macros such as `GET_INT_ARG` and `MRBC_TO_INT`. |
+| `CONFIG_MRUBYC_TICK_UNIT_MS` | `1` | Scheduler timer period in milliseconds (1–10). |
+| `CONFIG_MRUBYC_TIMESLICE_TICK_COUNT` | `10` | Scheduler time slice in mruby/c ticks (1–255). |
+| `CONFIG_MRUBYC_SCHEDULER_EXIT` | `y` | Return from `mrbc_run()` when active tasks drain. When disabled, the scheduler stays idle in its Zephyr thread. |
 
 Extended operands are enabled by default. The other runtime options use
-mruby/c defaults. The bundled release requires Float and String support.
-The HAL uses a 1 ms scheduler tick and 10 ticks per time
-slice. Use the Kconfig options to keep the application and runtime headers
-in sync. Link additional Zephyr libraries that include `mrubyc.h` with
-`zephyr_library_link_libraries(MRUBYC_API)`.
+mruby/c and Zephyr HAL defaults, including the pool allocator and the periodic
+Zephyr timer.
+
+- The time slice is the timer period multiplied by the tick count. Use
+  a period that is an exact multiple of the Zephyr system clock tick.
+- The sample scripts use `puts`. Update scripts that call console methods
+  before omitting those methods. Enable CRLF conversion only when the console
+  backend passes CRLF through.
+- Disabling destructors changes the class layout and removes
+  `mrbc_define_destructor()`. Use Kconfig to keep the application and runtime
+  headers in sync. Link additional Zephyr libraries that include `mrubyc.h` with
+  `zephyr_library_link_libraries(MRUBYC_API)`.
+- Pool profiling reports usage at allocator sampling points. Persistent
+  allocations made at the pool tail, such as new symbols or classes, first
+  appear in the next sample taken by an ordinary allocation or release.
+- `CONFIG_MRUBYC_OOM_POOL_STATS` uses the `MRBC_OUT_OF_MEMORY()` hook to
+  print total, used, and free pool bytes without allocating from the pool.
+  With the option off, the allocator reports the error before invoking the
+  same panic path.
+- `CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION` uses
+  `MRBC_ABORT_BY_EXCEPTION(vm)` when a VM ends with an unhandled exception.
+  With the option off, the VM prints the exception and completes shutdown,
+  allowing the scheduler to continue running other tasks. Ruby `rescue`
+  continues to handle exceptions in either configuration. The upstream scheduler
+  skips VM shutdown for tasks created by Ruby's `Task.create`, so those tasks
+  do not call the hook when an unhandled exception stops them.
+
+### Upstream options with fixed or derived values
+
+The mruby/c menu in `menuconfig` lists unavailable modes and fixed settings
+as read-only entries. The table explains their current behavior.
+
+| Upstream option | Zephyr behavior |
+| --- | --- |
+| `MRBC_USE_FLOAT` | Choose single or double precision. `MRBC_USE_FLOAT=0` fails to compile with the official 4.0.0 sources. |
+| `MRBC_USE_STRING` | String support stays enabled. Disabling it causes link errors in the official 4.0.0 sources. |
+| `MRBC_INT16` | The module supports 32-bit or 64-bit integers. The 16-bit mode breaks upstream variadic integer formatting. |
+| `MRBC_ALLOC_16BIT`, `MRBC_ALLOC_24BIT` | The pool uses upstream's `MRBC_ALLOC_24BIT` mode, with 32-bit headers when VM-ID tracking is off. The 16-bit headers can misalign objects on 32-bit targets. |
+| `MRBC_ALLOC_LIBC` | The pool allocator is used because upstream `String#clear` assumes shrinking a buffer keeps its address. |
+| `MRBC_ALLOC_VMID` | Upstream VM-ID tracking fails to compile with the official 4.0.0 sources. |
+| `MRBC_STRING_SIZE_T` | The String length field remains 16-bit. Wider lengths can exceed the limits of `String#bytes` and exception message storage. |
+| `MRBC_NAN_BOXING` | The default value layout preserves missing-keyword detection for C extensions using `MRBC_KW_ARG`. |
+| `MRBC_NO_TIMER` | The Zephyr timer supplies scheduler ticks. Upstream software ticks can ignore `Task.pass` and lose preemption after a rescued exception. |
+| `MRBC_ALLOC_FLI_BIT_WIDTH`, `MRBC_ALLOC_SLI_BIT_WIDTH`, `MRBC_ALLOC_IGNORE_LSBS`, `MRBC_MIN_MEMORY_BLOCK_SIZE` | The pool keeps upstream size classes and block layout. These parameters affect allocator indexing and alignment together. |
+| `MRBC_DEBUG` | Debug code and layouts follow the toolchain's `NDEBUG`, as in upstream. |
+| `MRBC_BIG_ENDIAN`, `MRBC_LITTLE_ENDIAN`, `MRBC_REQUIRE_32BIT_ALIGNMENT`, `MRBC_REQUIRE_64BIT_ALIGNMENT` | The module targets little-endian boards, derives 32-bit bytecode alignment from the board configuration, and retains upstream 64-bit alignment. |
+| `MRBC_SYMBOL_SEARCH_BTREE`, `MRBC_TICK_UNIT_{1,2,4,10}_MS` | The linear-lookup switch selects the alternative to the default binary tree. The timer period is configurable directly in milliseconds. |
+| `MRBC_BUILTIN_SYMBOL_MAX` | The upstream generated symbol table determines this value. Kconfig controls dynamic symbol capacity separately. |
+
+### Float and String in the next official mruby/c release
+
+- Add `MRBC_USE_FLOAT=0` to the Kconfig Float choice once the official
+  archive includes the
+  [upstream Float-disabled build fix](https://github.com/mrubyc/mrubyc/pull/293).
+  Keep double precision as the default and require Float for Math. A
+  Float-disabled build from upstream `master` ran the Hello sample on
+  `native_sim` and `qemu_cortex_m3` with Math disabled.
+- Add a String switch for `MRBC_USE_STRING=0` with String enabled by default.
+  Require String for UTF-8 indexing and Unicode case conversion. Upstream
+  `master` includes the
+  [String-disabled link fix](https://github.com/mrubyc/mrubyc/pull/294).
+  Its embedded Ruby library still raises an exception at startup when it
+  evaluates a string literal.
+  Verify that the official archive links and initializes the embedded
+  library without exceptions in the String-disabled configuration.
+
+Against the official archive, build and run a smoke test for each disabled
+mode on `native_sim` and `qemu_cortex_m3`. Use a Ruby script without
+string literals for the String-disabled test and check that it runs to
+completion after clean initialization.
 
 ## Tests and contributions
 
