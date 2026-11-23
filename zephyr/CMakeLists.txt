@@ -61,6 +61,11 @@ endif()
 zephyr_library_named(mrubyc)
 zephyr_library_link_libraries(MRUBYC_API)
 
+if(CONFIG_MRUBYC_OOM_POOL_STATS OR CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION)
+  # The upstream hook macros are function-like and need a C header.
+  zephyr_library_compile_options(-include "${CMAKE_CURRENT_LIST_DIR}/fatal_hooks.h")
+endif()
+
 if(CONFIG_MRUBYC_FLOAT_SINGLE)
   # Upstream forwards float values to variadic functions, which accept double.
   zephyr_library_compile_options(-Wno-double-promotion)

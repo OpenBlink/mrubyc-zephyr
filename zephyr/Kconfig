@@ -20,6 +20,13 @@ config MRUBYC_ALLOC_PROFILING
 	  releases sample pool usage. Persistent allocations made at the pool
 	  tail are reflected in the next sample.
 
+config MRUBYC_OOM_POOL_STATS
+	bool "Report mruby/c pool statistics on allocation failure"
+	depends on PRINTK
+	help
+	  Print total, used, and free pool bytes before invoking the Zephyr
+	  kernel panic. Otherwise the allocator prints only the error.
+
 config MRUBYC_MAX_VM_COUNT
 	int "Maximum simultaneous VMs"
 	range 1 255
@@ -91,6 +98,13 @@ config MRUBYC_EXCEPTION_CALL_NEST_LEVEL
 	default 8
 	help
 	  Number of call frames stored per exception for diagnostic output.
+
+config MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION
+	bool "Panic when a Ruby exception escapes the VM"
+	help
+	  Print the exception when the VM ends and invoke a Zephyr kernel
+	  panic. By default, the VM prints the exception and finishes its
+	  own shutdown while the scheduler can continue running other tasks.
 
 config MRUBYC_TASK_NAME_LEN
 	int "Maximum task name length in bytes"

@@ -152,6 +152,7 @@ firmware.
 | --- | --- | --- |
 | `CONFIG_MRUBYC` | `n` | Build the module. |
 | `CONFIG_MRUBYC_ALLOC_PROFILING` | `n` | Enable the pool allocator's `mrbc_alloc_*_profiling()` API. |
+| `CONFIG_MRUBYC_OOM_POOL_STATS` | `n` | Print pool usage before the existing kernel panic on allocation failure. Requires `CONFIG_PRINTK=y`. |
 | `CONFIG_MRUBYC_MAX_VM_COUNT` | `5` | Maximum number of VM instances. |
 | `CONFIG_MRUBYC_MAX_REGS_SIZE` | `110` | Default register capacity per VM. |
 | `CONFIG_MRUBYC_MAX_SYMBOLS_COUNT` | `255` | Dynamic symbol table capacity. |
@@ -164,6 +165,7 @@ firmware.
 | `CONFIG_MRUBYC_SUPPORT_OP_EXT` | `y` | Enable extended bytecode operands (`MRBC_SUPPORT_OP_EXT=1`). |
 | `CONFIG_MRUBYC_INSTANCE_DESTRUCTOR` | `y` | Allow C extensions to register instance destructor callbacks. |
 | `CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL` | `8` | Record up to this many call frames per exception (1–64). |
+| `CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION` | `n` | Print the unhandled exception at VM shutdown and panic the Zephyr kernel. |
 | `CONFIG_MRUBYC_TASK_NAME_LEN` | `15` | Maximum task name length in bytes, excluding the terminating NUL (1–255). |
 | `CONFIG_MRUBYC_KV_SIZE_INIT` | `2` | Initial key-value table capacity (1–64). |
 | `CONFIG_MRUBYC_KV_SIZE_INCREMENT` | `5` | Entries added when a key-value table fills (1–64). |
@@ -191,23 +193,33 @@ Zephyr timer.
 - Pool profiling reports usage at allocator sampling points. Persistent
   allocations made at the pool tail, such as new symbols or classes, first
   appear in the next sample taken by an ordinary allocation or release.
+- `CONFIG_MRUBYC_OOM_POOL_STATS` uses the `MRBC_OUT_OF_MEMORY()` hook to
+  print total, used, and free pool bytes without allocating from the pool.
+  With the option off, the allocator reports the error before invoking the
+  same panic path.
+- `CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION` uses
+  `MRBC_ABORT_BY_EXCEPTION(vm)` when a VM ends with an unhandled exception.
+  With the option off, the VM prints the exception and completes shutdown,
+  allowing the scheduler to continue running other tasks. Ruby `rescue`
+  continues to handle exceptions in either configuration.
 
-The official 4.0.0 sources require Float and String support with this
-integration. The upstream 16-bit integer mode breaks variadic integer
-formatting, 16-bit pool headers can misalign objects on 32-bit targets, and the
-VM-ID allocator mode fails to compile. The pool's layout parameters stay at
-their upstream defaults, debug code follows the compiler's `NDEBUG`, and
-fatal-error hooks remain C macros. The module targets little-endian boards and
-derives bytecode alignment requirements from the Zephyr configuration.
+### Upstream options with fixed or derived values
 
-The module uses the periodic timer because the upstream software scheduler
-can ignore `Task.pass` and lose preemption after a rescued exception.
-The module uses the pool allocator because upstream `String#clear` assumes
-that shrinking a buffer keeps its address.
-String lengths use the default 16-bit field. Wider Strings can exceed the
-16-bit limits in `String#bytes` and exception message storage.
-The default value layout preserves missing-keyword detection for C extensions
-using `MRBC_KW_ARG`. Upstream NaN boxing misclassifies those values.
+| Upstream option | Zephyr behavior |
+| --- | --- |
+| `MRBC_USE_FLOAT`, `MRBC_USE_STRING` | Float precision is selectable. Disabling Float causes compilation errors and disabling String causes link errors in the official 4.0.0 sources. |
+| `MRBC_INT16` | The module supports 32-bit or 64-bit integers. The 16-bit mode breaks upstream variadic integer formatting. |
+| `MRBC_ALLOC_16BIT`, `MRBC_ALLOC_24BIT` | The pool uses 24-bit block sizes. The 16-bit headers can misalign objects on 32-bit targets. |
+| `MRBC_ALLOC_LIBC` | The pool allocator is used because upstream `String#clear` assumes shrinking a buffer keeps its address. |
+| `MRBC_ALLOC_VMID` | Upstream VM-ID tracking fails to compile with the official 4.0.0 sources. |
+| `MRBC_STRING_SIZE_T` | The String length field remains 16-bit. Wider lengths can exceed the limits of `String#bytes` and exception message storage. |
+| `MRBC_NAN_BOXING` | The default value layout preserves missing-keyword detection for C extensions using `MRBC_KW_ARG`. |
+| `MRBC_NO_TIMER` | The Zephyr timer supplies scheduler ticks. Upstream software ticks can ignore `Task.pass` and lose preemption after a rescued exception. |
+| `MRBC_ALLOC_FLI_BIT_WIDTH`, `MRBC_ALLOC_SLI_BIT_WIDTH`, `MRBC_ALLOC_IGNORE_LSBS`, `MRBC_MIN_MEMORY_BLOCK_SIZE` | The pool keeps upstream size classes and block layout. These parameters affect allocator indexing and alignment together. |
+| `MRBC_DEBUG` | Debug code and layouts follow the toolchain's `NDEBUG`, as in upstream. |
+| `MRBC_BIG_ENDIAN`, `MRBC_LITTLE_ENDIAN`, `MRBC_REQUIRE_32BIT_ALIGNMENT`, `MRBC_REQUIRE_64BIT_ALIGNMENT` | The module targets little-endian boards, derives 32-bit bytecode alignment from the board configuration, and retains upstream 64-bit alignment. |
+| `MRBC_SYMBOL_SEARCH_BTREE`, `MRBC_TICK_UNIT_{1,2,4,10}_MS` | The linear-lookup switch selects the alternative to the default binary tree. The timer period is configurable directly in milliseconds. |
+| `MRBC_BUILTIN_SYMBOL_MAX` | The upstream generated symbol table determines this value. Kconfig controls dynamic symbol capacity separately. |
 
 ## Tests and contributions
 

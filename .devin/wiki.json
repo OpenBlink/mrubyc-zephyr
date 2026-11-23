@@ -70,7 +70,7 @@
       "parent": "What does this Zephyr module provide?",
       "page_notes": [
         {
-          "content": "README.md lists the supported options and upstream restrictions. Options include VM and symbol limits, symbol lookup, Float precision, Math, UTF-8 and Unicode, INT64, extended operands, destructor callbacks, key-value table sizing, pool profiling, console methods and CRLF, VM diagnostics, exception depth, task names, and scheduler timing and exit."
+          "content": "README.md lists the supported options and upstream restrictions, including configurable pool diagnostics on allocation failure and an opt-in kernel panic when an unhandled exception terminates a VM."
         },
         {
           "content": "zephyr/CMakeLists.txt defines the interface library MRUBYC_API carrying include directories and compile definitions; consumers link it with zephyr_library_link_libraries(MRUBYC_API) so application and runtime headers always agree on structure layout."
@@ -114,7 +114,7 @@
           "content": "tests/mrubyc checks that Kconfig values reach the public headers. The RITE0400 runtime rejects a v3.4.1 RITE0300 fixture, then runs a timed sleep and pattern match. An OP_EXT script runs if and only if extended operands are enabled. The suite also checks task names, exception traces, destructor callbacks, and scheduler idle behavior."
         },
         {
-          "content": "testcase.yaml covers defaults, extended operands disabled, strict alignment on qemu_cortex_m3, custom runtime settings, scheduler idle, and console and allocator diagnostics."
+          "content": "tests/mrubyc covers default and custom runtime settings, extended operands, strict alignment, scheduler idle, and diagnostics. tests/fatal_hooks checks pool exhaustion and unhandled exceptions with both default and opt-in fatal error policies."
         },
         {
           "content": "tests/posix/main.c is compiled by scripts/posix-smoke.sh as a -m32 host binary against the upstream POSIX HAL extracted from the release tarball, asserting the same 'a:start','b:ran','a:done' schedule."

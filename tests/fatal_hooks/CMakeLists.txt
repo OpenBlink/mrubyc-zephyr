@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.20.0)
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(mrubyc_fatal_hooks)
+
+include("${ZEPHYR_MRUBYC_MODULE_DIR}/cmake/mrubyc.cmake")
+target_sources(app PRIVATE main.c)
+if(TRIGGER_OOM)
+  target_compile_definitions(app PRIVATE TRIGGER_OOM=1)
+else()
+  mrubyc_embed_script(app exception_mrb exception.rb)
+endif()
