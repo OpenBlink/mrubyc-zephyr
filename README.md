@@ -100,7 +100,7 @@ int main(void)
 }
 ~~~
 
-`mrbc_init()` starts the HAL timer with the default settings. Keep the pool
+`mrbc_init()` starts the HAL timer. Keep the pool
 and bytecode alive for the lifetime of the runtime, and access the VM from
 one Zephyr thread. Ruby tasks share that thread and are scheduled by mruby/c.
 By default, the scheduler returns when there are no runnable, waiting, or
@@ -183,12 +183,14 @@ Zephyr timer.
   a period that is an exact multiple of the Zephyr system clock tick.
 - The sample scripts use `puts`. Update scripts that call console methods
   before omitting those methods. Enable CRLF conversion only when the console
-  backend passes line feeds through.
+  backend passes CRLF through.
 - Disabling destructors changes the class layout and removes
-  `mrbc_define_destructor()`. Use Kconfig to
-  keep the application and runtime headers in sync. Link additional Zephyr
-  libraries that include `mrubyc.h` with
+  `mrbc_define_destructor()`. Use Kconfig to keep the application and runtime
+  headers in sync. Link additional Zephyr libraries that include `mrubyc.h` with
   `zephyr_library_link_libraries(MRUBYC_API)`.
+- Pool profiling reports usage at allocator sampling points. Persistent
+  allocations made at the pool tail, such as new symbols or classes, first
+  appear in the next sample taken by an ordinary allocation or release.
 
 The official 4.0.0 sources require Float and String support with this
 integration. The upstream 16-bit integer mode breaks variadic integer
@@ -197,6 +199,7 @@ VM-ID allocator mode fails to compile. The pool's layout parameters stay at
 their upstream defaults, debug code follows the compiler's `NDEBUG`, and
 fatal-error hooks remain C macros. The module targets little-endian boards and
 derives bytecode alignment requirements from the Zephyr configuration.
+
 The module uses the periodic timer because the upstream software scheduler
 can ignore `Task.pass` and lose preemption after a rescued exception.
 The module uses the pool allocator because upstream `String#clear` assumes

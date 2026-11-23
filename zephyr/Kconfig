@@ -5,7 +5,7 @@ menuconfig MRUBYC
 	depends on MULTITHREADING && SYS_CLOCK_EXISTS && !SMP && !BIG_ENDIAN && !64BIT
 	help
 	  Build mruby/c and its Zephyr scheduler and console integration.
-	  The application initializes the runtime and starts the Ruby tasks.
+	  The application supplies a memory pool and starts the Ruby tasks.
 
 if MRUBYC
 
@@ -16,8 +16,9 @@ config APP_LINK_WITH_MRUBYC_API
 config MRUBYC_ALLOC_PROFILING
 	bool "Memory pool profiling"
 	help
-	  Enable the mrbc_alloc_*_profiling() API. While profiling is active,
-	  the allocator scans the pool on allocation and release.
+	  Enable the mrbc_alloc_*_profiling() API. Ordinary allocations and
+	  releases sample pool usage. Persistent allocations made at the pool
+	  tail are reflected in the next sample.
 
 config MRUBYC_MAX_VM_COUNT
 	int "Maximum simultaneous VMs"

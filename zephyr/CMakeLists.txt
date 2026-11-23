@@ -10,7 +10,7 @@ set(hal_dir "${CMAKE_CURRENT_LIST_DIR}/hal")
 math(EXPR tick_remainder "(${CONFIG_SYS_CLOCK_TICKS_PER_SEC} * ${CONFIG_MRUBYC_TICK_UNIT_MS}) % 1000")
 if(NOT tick_remainder EQUAL 0)
   message(STATUS
-    "mruby/c: Zephyr rounds the ${CONFIG_MRUBYC_TICK_UNIT_MS} ms HAL period to whole ticks at ${CONFIG_SYS_CLOCK_TICKS_PER_SEC} Hz")
+    "mruby/c: Zephyr rounds the ${CONFIG_MRUBYC_TICK_UNIT_MS} ms HAL timer to whole ticks at ${CONFIG_SYS_CLOCK_TICKS_PER_SEC} Hz")
 endif()
 
 if(CONFIG_MRUBYC_FLOAT_SINGLE)
