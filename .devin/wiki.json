@@ -38,10 +38,10 @@
       "parent": "What does this Zephyr module provide?",
       "page_notes": [
         {
-          "content": "prj.conf needs CONFIG_MRUBYC=y plus CONFIG_PRINTK=y for console output. SYS_CLOCK_TICKS_PER_SEC should divide evenly into 1000; with a coarser clock Zephyr rounds each 1 ms HAL period up, so Ruby sleep and scheduling take longer — the CMake file warns about this."
+          "content": "prj.conf needs CONFIG_MRUBYC=y plus CONFIG_PRINTK=y for console output. SYS_CLOCK_TICKS_PER_SEC should be a multiple of 1000 so one millisecond is an integer number of Zephyr ticks; with a coarser clock Zephyr rounds each 1 ms HAL period up, so Ruby sleep and scheduling take longer — the CMake file warns about this."
         },
         {
-          "content": "The main() pattern: a static 8-aligned pool goes to mrbc_init (which starts the HAL timer), each bytecode array to mrbc_create_task, then mrbc_run returns 0 once no runnable, waiting, or suspended tasks remain (SCHEDULER_EXIT=1)."
+          "content": "The main() pattern: a static 8-aligned pool goes to mrbc_init (which starts the HAL timer), each bytecode array to mrbc_create_task, then mrbc_run. With SCHEDULER_EXIT=1 the scheduler returns once no runnable, waiting, or suspended tasks remain; the return value is 0 on a clean run and nonzero when execution stopped on a VM error such as bytecode the build cannot execute."
         },
         {
           "content": "The VM is single-threaded: access it from one Zephyr thread and let mruby/c schedule Ruby tasks inside it. Keep the pool and bytecode alive for the runtime's lifetime, and use bytecode built from trusted sources."
@@ -114,7 +114,7 @@
           "content": "tests/mrubyc asserts at build time that every CONFIG_MRUBYC_* equals the compiled definition, then at runtime that a RITE0400 header is rejected by the RITE0300 loader, a 20 ms sleep_ms finishes within measured bounds, and an OP_EXT-forcing script (more than 255 distinct literals) runs if and only if SUPPORT_OP_EXT is enabled."
         },
         {
-          "content": "testcase.yaml variants: defaults (EXPECT_DEFAULTS=ON), no_op_ext, trap_unaligned (qemu_cortex_m3 only), and a custom configuration that exercises every non-default option."
+          "content": "testcase.yaml variants: defaults (EXPECT_DEFAULTS=ON), no_op_ext (SUPPORT_OP_EXT=n), trap_unaligned (qemu_cortex_m3 only), and a custom configuration that sets non-default values for every option other than SUPPORT_OP_EXT."
         },
         {
           "content": "tests/posix/main.c is compiled by scripts/posix-smoke.sh as a -m32 host binary against the upstream POSIX HAL extracted from the release tarball, asserting the same 'a:start','b:ran','a:done' schedule."
