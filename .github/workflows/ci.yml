@@ -20,7 +20,7 @@ concurrency:
 jobs:
   twister:
     name: Twister / ${{ matrix.board }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -44,7 +44,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           cache: pip
           cache-dependency-path: workspace/mrubyc-zephyr/.github/requirements.txt
       - name: Set tool paths
@@ -106,9 +106,9 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-24.04-${{ runner.arch }}-${{ matrix.board }}-${{ steps.compiler.outputs.fingerprint }}-${{ hashFiles('workspace/mrubyc-zephyr/west.yml', 'workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh') }}-${{ github.sha }}
+          key: ccache-26.04-${{ runner.arch }}-${{ matrix.board }}-${{ steps.compiler.outputs.fingerprint }}-${{ hashFiles('workspace/mrubyc-zephyr/west.yml', 'workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh') }}-${{ github.sha }}
           restore-keys: |
-            ccache-24.04-${{ runner.arch }}-${{ matrix.board }}-${{ steps.compiler.outputs.fingerprint }}-${{ hashFiles('workspace/mrubyc-zephyr/west.yml', 'workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh') }}-
+            ccache-26.04-${{ runner.arch }}-${{ matrix.board }}-${{ steps.compiler.outputs.fingerprint }}-${{ hashFiles('workspace/mrubyc-zephyr/west.yml', 'workspace/mrubyc-zephyr/scripts/setup-zephyr-sdk.sh') }}-
       - name: Run Twister
         working-directory: workspace
         env:
@@ -133,7 +133,7 @@ jobs:
 
   bytecode:
     name: Bundled source and bytecode
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -149,7 +149,7 @@ jobs:
 
   posix:
     name: POSIX smoke test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -163,7 +163,7 @@ jobs:
 
   workflows:
     name: Workflow and shell validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
