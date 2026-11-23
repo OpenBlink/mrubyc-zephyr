@@ -23,9 +23,12 @@ UnicodeData.txt
 hal_selector.mk"
 upstream_exclusions=$(find "$work/upstream/src" -mindepth 1 -maxdepth 1 \
   ! -name '*.c' ! -name '*.h' ! -name VERSION -printf '%f\n' | sort)
-if [[ "$upstream_exclusions" != "$known_exclusions" ]]; then
+# sort(1) ordering is locale-dependent, so sort the literal list too.
+sorted_known_exclusions=$(printf '%s\n' "$known_exclusions" | sort)
+if [[ "$upstream_exclusions" != "$sorted_known_exclusions" ]]; then
   printf 'error: new files in upstream src/; vendor them or extend known_exclusions:\n' >&2
-  diff <(printf '%s\n' "$known_exclusions") <(printf '%s\n' "$upstream_exclusions") >&2 || true
+  diff <(printf '%s\n' "$sorted_known_exclusions") \
+    <(printf '%s\n' "$upstream_exclusions") >&2 || true
   exit 1
 fi
 
