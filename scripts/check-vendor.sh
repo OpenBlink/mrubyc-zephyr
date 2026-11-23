@@ -35,7 +35,7 @@ fi
 # zephyr/CMakeLists.txt must compile the same translation units the
 # upstream src/Makefile lists in SRCS (hal.c resolves to zephyr/hal here).
 upstream_srcs=$(sed -n '/^SRCS =/,/[^\\]$/p' "$work/upstream/src/Makefile" \
-  | sed 's/\\//g' | tr ' ' '\n' | grep -E '\.c$' | sort)
+  | sed -e 's/#.*//' -e 's/\\//g' | tr ' \t' '\n' | grep -E '\.c$' | sort)
 module_srcs=$(sed -n '/^zephyr_library_sources(/,/^)/p' "$repo/zephyr/CMakeLists.txt" \
   | sed -n 's|^[[:space:]]*"\${[a-z_]*_dir}/\([[:alnum:]_]*\.c\)".*|\1|p' | sort)
 if [[ "$upstream_srcs" != "$module_srcs" ]]; then
