@@ -214,6 +214,13 @@ thread remain separate layers. [Scheduler](../vendor/mrubyc/src/rrt0.c) ·
 | Set timing | The default slice is 10 mruby/c ticks at 1 ms per tick. Sleep and preemption depend on the Zephyr clock and when the VM can next run. Use the target to measure actual wakeup latency. |
 | Finish | With `CONFIG_MRUBYC_SCHEDULER_EXIT=y`, `mrbc_run()` returns once the scheduler has no ready, waiting, or suspended tasks. A suspended task can keep it alive. Budget VM count and per-VM registers when adding tasks. |
 
+Each successful `Task.create` reserves a VM ID, which remains allocated
+after the task becomes dormant. The Ruby `Task` API has no delete method in
+4.0.0. Use a fixed set of long-lived tasks for recurring work to avoid
+exhausting `CONFIG_MRUBYC_MAX_VM_COUNT`. For tasks whose lifetime is
+managed in C, `mrbc_delete_task()` closes a dormant task's VM. Release
+references to the task before deleting it, including any Ruby handles.
+
 ### Release resources on success and error
 
 Use a block to scope ownership and `ensure` to release the resource.
