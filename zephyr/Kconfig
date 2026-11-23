@@ -100,11 +100,13 @@ config MRUBYC_EXCEPTION_CALL_NEST_LEVEL
 	  Number of call frames stored per exception for diagnostic output.
 
 config MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION
-	bool "Panic when a Ruby exception escapes the VM"
+	bool "Panic on an unhandled Ruby exception at VM shutdown"
 	help
 	  Print the exception when the VM ends and invoke a Zephyr kernel
 	  panic. By default, the VM prints the exception and finishes its
 	  own shutdown while the scheduler can continue running other tasks.
+	  Ruby Task.create tasks retain their VMs when they stop and do not
+	  invoke the shutdown hook.
 
 config MRUBYC_TASK_NAME_LEN
 	int "Maximum task name length in bytes"

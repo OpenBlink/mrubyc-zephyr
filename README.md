@@ -165,7 +165,7 @@ firmware.
 | `CONFIG_MRUBYC_SUPPORT_OP_EXT` | `y` | Enable extended bytecode operands (`MRBC_SUPPORT_OP_EXT=1`). |
 | `CONFIG_MRUBYC_INSTANCE_DESTRUCTOR` | `y` | Allow C extensions to register instance destructor callbacks. |
 | `CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL` | `8` | Record up to this many call frames per exception (1–64). |
-| `CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION` | `n` | Print the unhandled exception at VM shutdown and panic the Zephyr kernel. |
+| `CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION` | `n` | Panic the Zephyr kernel on an unhandled exception at VM shutdown. Ruby `Task.create` tasks retain their VMs when they stop. |
 | `CONFIG_MRUBYC_TASK_NAME_LEN` | `15` | Maximum task name length in bytes, excluding the terminating NUL (1–255). |
 | `CONFIG_MRUBYC_KV_SIZE_INIT` | `2` | Initial key-value table capacity (1–64). |
 | `CONFIG_MRUBYC_KV_SIZE_INCREMENT` | `5` | Entries added when a key-value table fills (1–64). |
@@ -201,7 +201,9 @@ Zephyr timer.
   `MRBC_ABORT_BY_EXCEPTION(vm)` when a VM ends with an unhandled exception.
   With the option off, the VM prints the exception and completes shutdown,
   allowing the scheduler to continue running other tasks. Ruby `rescue`
-  continues to handle exceptions in either configuration.
+  continues to handle exceptions in either configuration. The upstream scheduler
+  skips VM shutdown for tasks created by Ruby's `Task.create`, so those tasks
+  do not call the hook when an unhandled exception stops them.
 
 ### Upstream options with fixed or derived values
 

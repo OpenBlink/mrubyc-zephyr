@@ -39,3 +39,13 @@ tests:
         - 'Rescued exception'
         - 'unhandled test exception'
         - 'Caught Zephyr kernel panic'
+  mrubyc.fatal_hooks.dynamic_task_exception:
+    extra_args: USE_DYNAMIC_TASK=ON
+    extra_configs:
+      - CONFIG_MRUBYC_PANIC_ON_UNHANDLED_EXCEPTION=y
+    harness_config:
+      type: multi_line
+      regex:
+        - 'Rescued exception'
+        - 'Dynamic task joined'
+        - 'Scheduler returned the unhandled exception status'

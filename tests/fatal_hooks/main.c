@@ -11,6 +11,9 @@
 #ifndef TRIGGER_OOM
 #include "exception_mrb.h"
 #endif
+#ifdef USE_DYNAMIC_TASK
+#include "dynamic_task_mrb.h"
+#endif
 
 void k_sys_fatal_error_handler(unsigned int reason, const struct arch_esf *esf)
 {
@@ -35,7 +38,17 @@ int main(void)
 	/* The pool header and existing allocations leave less than this size. */
 	mrbc_raw_alloc(sizeof(pool));
 #else
-	if (mrbc_create_task(exception_mrb, NULL) == NULL) {
+#ifdef USE_DYNAMIC_TASK
+	mrbc_value script = mrbc_string_new(NULL, exception_mrb, sizeof(exception_mrb));
+
+	if (mrbc_set_global(mrbc_str_to_symid("$task_bytecode"), &script) != 0) {
+		return 1;
+	}
+	const uint8_t *bytecode = dynamic_task_mrb;
+#else
+	const uint8_t *bytecode = exception_mrb;
+#endif
+	if (mrbc_create_task(bytecode, NULL) == NULL) {
 		return 1;
 	}
 	if (mrbc_run() == 2) {
