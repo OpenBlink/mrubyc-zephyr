@@ -147,21 +147,22 @@ pool reservation. Measure pool use under your application's workload with
 `mrbc_alloc_statistics()` or `CONFIG_MRUBYC_ALLOC_PROFILING`.
 
 In the west workspace, set the path to your Zephyr SDK 0.16.9 installation
-and build Hello. Read the region totals in the final link output and use
-the Zephyr reports to inspect individual symbols.
+and build Hello. Set `BUILD_VERSION` so the boot banner uses the same text
+in checkouts with or without the Git tag. Read the region totals in the
+final link output and use the Zephyr reports to inspect individual symbols.
 
 ~~~sh
 export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 export ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk-0.16.9
 west build -p always -b qemu_cortex_m3 -d build/footprint-hello \
-  modules/lib/mrubyc-zephyr/samples/hello
+  modules/lib/mrubyc-zephyr/samples/hello -- -DBUILD_VERSION=v3.7.2
 west build -d build/footprint-hello -t rom_report
 west build -d build/footprint-hello -t ram_report
 ~~~
 
-To reproduce the C baseline, copy the sample and set `CONFIG_MRUBYC=n` in
-its `prj.conf`. Replace its `main.c` with the following program and build
-the copy in a fresh build directory with the same board and toolchain.
+To reproduce the C baseline, copy the sample to `hello-c` in the workspace
+and set `CONFIG_MRUBYC=n` in its `prj.conf`. Replace its `main.c` with the
+following program.
 
 ~~~c
 #include <zephyr/sys/printk.h>
@@ -172,6 +173,11 @@ int main(void)
     printk("mruby/c finished\n");
     return 0;
 }
+~~~
+
+~~~sh
+west build -p always -b qemu_cortex_m3 -d build/footprint-c \
+  hello-c -- -DBUILD_VERSION=v3.7.2
 ~~~
 
 Measure again for each target, configuration, and workload you intend to
