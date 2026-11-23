@@ -300,8 +300,7 @@ Use `mrbc_define_module` for a module and the `*_under` functions to
 register under a namespace. Use `mrbc_define_method` for the callbacks.
 Class and instance receivers can reach the same method table in 4.0.0.
 Check the receiver's tag and class identity for a class-only method.
-Check the object tag and expected class before reading an instance's
-native data. An `initialize` callback sets up the receiver in place.
+An `initialize` callback sets up the receiver in place.
 [Class and method API](../vendor/mrubyc/src/class.h)
 
 ### Validate positional arguments, keywords, and results
@@ -421,7 +420,15 @@ methods. [Value API](../vendor/mrubyc/src/value.h) ·
 [Method dispatch](../vendor/mrubyc/src/class.c)
 
 Use `mrbc_instance_new` to allocate an instance with inline native data
-when implementing a native constructor. Make explicit close idempotent.
+when implementing a native constructor. `Object#dup` copies the class
+and instance variables but allocates zero bytes of inline data. Verify
+the receiver's tag, class, and native registration before accessing its
+data. For example, keep a bounded table keyed by the identity of each
+instance initialized by the binding. A copy will have a different identity.
+[Object duplication](../vendor/mrubyc/src/c_object.c)
+
+Make explicit close idempotent and invalidate the native registration
+when releasing the resource. Apply the same validity check in a destructor.
 With `CONFIG_MRUBYC_INSTANCE_DESTRUCTOR=y`, `mrbc_define_destructor`
 can register a fallback for ordinary instance destruction. The
 destructor receives the value. Close native resources on the application
