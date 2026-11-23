@@ -174,8 +174,7 @@ firmware.
 | `CONFIG_MRUBYC_CONVERT_CRLF` | `n` | Convert LF to CRLF in mruby/c console output when Zephyr's UART console is disabled. |
 | `CONFIG_MRUBYC_DEBUG_REGS` | `n` | Print VM register usage when a VM finishes. |
 | `CONFIG_MRUBYC_DISABLE_LEGACY_VALUE_MACROS` | `n` | Omit legacy C value macros such as `GET_INT_ARG` and `MRBC_TO_INT`. Enabled automatically with NaN boxing. |
-| `CONFIG_MRUBYC_NO_TIMER` | `n` | Advance scheduler ticks in software. |
-| `CONFIG_MRUBYC_TICK_UNIT_MS` | `1` | Timer or idle sleep period in milliseconds (1–10). |
+| `CONFIG_MRUBYC_TICK_UNIT_MS` | `1` | Scheduler timer period in milliseconds (1–10). |
 | `CONFIG_MRUBYC_TIMESLICE_TICK_COUNT` | `10` | Scheduler time slice in mruby/c ticks (1–255). |
 | `CONFIG_MRUBYC_SCHEDULER_EXIT` | `y` | Return from `mrbc_run()` when active tasks drain. When disabled, the scheduler stays idle in its Zephyr thread. |
 
@@ -187,10 +186,8 @@ Zephyr timer.
   initialize the runtime once with `mrbc_init(NULL, 0)`. In this mode
   `mrbc_cleanup()` does not reclaim persistent allocations such as dynamic
   symbols. The mruby/c pool statistics and profiling APIs are unavailable.
-- With the periodic timer, the time slice is the period multiplied by the
-  tick count. With software ticks, the time slice counts VM steps and Ruby
-  sleep intervals can vary with scheduler activity. Use a period that is an
-  exact multiple of the Zephyr system clock tick.
+- The time slice is the timer period multiplied by the tick count. Use
+  a period that is an exact multiple of the Zephyr system clock tick.
 - The sample scripts use `puts`. Update scripts that call console methods
   before omitting those methods. Enable CRLF conversion only when the console
   backend passes line feeds through.
@@ -207,6 +204,8 @@ VM-ID allocator mode fails to compile. The pool's layout parameters stay at
 their upstream defaults, debug code follows the compiler's `NDEBUG`, and
 fatal-error hooks remain C macros. The module targets little-endian boards and
 derives bytecode alignment requirements from the Zephyr configuration.
+The module uses the periodic timer because the upstream software scheduler
+can ignore `Task.pass` and lose preemption after a rescued exception.
 
 ## Tests and contributions
 

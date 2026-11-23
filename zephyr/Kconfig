@@ -163,28 +163,21 @@ config MRUBYC_DISABLE_LEGACY_VALUE_MACROS
 	  Hide legacy C value macros such as GET_INT_ARG and MRBC_TO_INT.
 	  Use the mrbc_value accessors in C extensions.
 
-config MRUBYC_NO_TIMER
-	bool "Use software scheduler ticks"
-	help
-	  Advance ticks from the scheduler loop instead of a periodic
-	  Zephyr timer. Time slices count VM steps in this mode, and Ruby
-	  sleep intervals can vary with scheduler activity.
-
 config MRUBYC_TICK_UNIT_MS
 	int "mruby/c timer period in milliseconds"
 	range 1 10
 	default 1
 	help
-	  Sets the Ruby sleep resolution and the timer or idle sleep period.
-	  Choose an exact multiple of the Zephyr system clock tick.
+	  Sets the scheduling and Ruby sleep resolution. Choose a period
+	  that is an exact multiple of the Zephyr system clock tick.
 
 config MRUBYC_TIMESLICE_TICK_COUNT
 	int "Scheduler time slice in mruby/c ticks"
 	range 1 255
 	default 10
 	help
-	  Number of mruby/c ticks in a time slice. With software ticks, this
-	  is the number of VM steps in a time slice.
+	  Number of mruby/c ticks in a time slice. The time slice in
+	  milliseconds is this value times the mruby/c timer period.
 
 config MRUBYC_SCHEDULER_EXIT
 	bool "Return from mrbc_run() when tasks drain"

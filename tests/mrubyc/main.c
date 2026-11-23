@@ -44,8 +44,7 @@ BUILD_ASSERT(MRBC_SCHEDULER_EXIT == IS_ENABLED(CONFIG_MRUBYC_SCHEDULER_EXIT));
 #endif
 #if defined(MRBC_NO_STDIO) != defined(CONFIG_MRUBYC_NO_STDIO) || \
 	defined(MRBC_CONVERT_CRLF) != defined(CONFIG_MRUBYC_CONVERT_CRLF) || \
-	defined(MRBC_DEBUG_REGS) != defined(CONFIG_MRUBYC_DEBUG_REGS) || \
-	defined(MRBC_NO_TIMER) != defined(CONFIG_MRUBYC_NO_TIMER)
+	defined(MRBC_DEBUG_REGS) != defined(CONFIG_MRUBYC_DEBUG_REGS)
 #error "The application and mruby/c disagree on HAL or diagnostics configuration"
 #endif
 #if defined(GET_INT_ARG) == defined(CONFIG_MRUBYC_DISABLE_LEGACY_VALUE_MACROS)
@@ -65,7 +64,7 @@ BUILD_ASSERT(MRBC_KV_SIZE_INIT == 2 && MRBC_KV_SIZE_INCREMENT == 5);
 BUILD_ASSERT(sizeof(MRBC_STRING_SIZE_T) == sizeof(uint16_t));
 #if defined(MRBC_INT64) || defined(MRBC_ALLOC_LIBC) || defined(MRBC_USE_ALLOC_PROF) || \
 	defined(MRBC_NAN_BOXING) || defined(MRBC_NO_STDIO) || defined(MRBC_CONVERT_CRLF) || \
-	defined(MRBC_DEBUG_REGS) || defined(MRBC_NO_TIMER) || !defined(GET_INT_ARG)
+	defined(MRBC_DEBUG_REGS) || !defined(GET_INT_ARG)
 #error "Unexpected upstream defaults"
 #endif
 #endif
