@@ -209,7 +209,8 @@ Zephyr timer.
 
 | Upstream option | Zephyr behavior |
 | --- | --- |
-| `MRBC_USE_FLOAT`, `MRBC_USE_STRING` | Float precision is selectable. Disabling Float causes compilation errors and disabling String causes link errors in the official 4.0.0 sources. |
+| `MRBC_USE_FLOAT` | Choose single or double precision. `MRBC_USE_FLOAT=0` fails to compile with the official 4.0.0 sources. |
+| `MRBC_USE_STRING` | String support stays enabled. Disabling it causes link errors in the official 4.0.0 sources. |
 | `MRBC_INT16` | The module supports 32-bit or 64-bit integers. The 16-bit mode breaks upstream variadic integer formatting. |
 | `MRBC_ALLOC_16BIT`, `MRBC_ALLOC_24BIT` | The pool uses upstream's `MRBC_ALLOC_24BIT` mode, with 32-bit headers when VM-ID tracking is off. The 16-bit headers can misalign objects on 32-bit targets. |
 | `MRBC_ALLOC_LIBC` | The pool allocator is used because upstream `String#clear` assumes shrinking a buffer keeps its address. |
@@ -222,6 +223,14 @@ Zephyr timer.
 | `MRBC_BIG_ENDIAN`, `MRBC_LITTLE_ENDIAN`, `MRBC_REQUIRE_32BIT_ALIGNMENT`, `MRBC_REQUIRE_64BIT_ALIGNMENT` | The module targets little-endian boards, derives 32-bit bytecode alignment from the board configuration, and retains upstream 64-bit alignment. |
 | `MRBC_SYMBOL_SEARCH_BTREE`, `MRBC_TICK_UNIT_{1,2,4,10}_MS` | The linear-lookup switch selects the alternative to the default binary tree. The timer period is configurable directly in milliseconds. |
 | `MRBC_BUILTIN_SYMBOL_MAX` | The upstream generated symbol table determines this value. Kconfig controls dynamic symbol capacity separately. |
+
+When updating to the next official mruby/c release, verify that it includes the
+[upstream Float-disabled build fix](https://github.com/mrubyc/mrubyc/pull/293).
+Add `MRBC_USE_FLOAT=0` to the Kconfig Float choice as part of that update and
+make the Math option depend on Float being enabled. Keep double precision as
+the default. A Float-disabled build from upstream `master` ran the Hello
+sample on `native_sim` and `qemu_cortex_m3` with Math disabled. Repeat the
+build and smoke test on both targets against the official release archive.
 
 ## Tests and contributions
 
