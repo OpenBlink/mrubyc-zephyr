@@ -1,4 +1,5 @@
 sleep_ms 20
+$float_result = 1.5 + 1.75
 
 values = [6, 7]
 case values

@@ -5,13 +5,28 @@ menuconfig MRUBYC
 	depends on MULTITHREADING && SYS_CLOCK_EXISTS && !SMP && !BIG_ENDIAN && !64BIT
 	help
 	  Build mruby/c and its Zephyr scheduler and console integration.
-	  The application supplies a memory pool and starts the Ruby tasks.
+	  The application initializes the runtime and starts the Ruby tasks.
 
 if MRUBYC
 
 config APP_LINK_WITH_MRUBYC_API
 	bool
 	default y
+
+config MRUBYC_ALLOC_LIBC
+	bool "Use the C library allocator"
+	depends on EXTERNAL_LIBC || NEWLIB_LIBC || (COMMON_LIBC_MALLOC && COMMON_LIBC_MALLOC_ARENA_SIZE != 0)
+	help
+	  Use malloc, realloc, and free instead of the mruby/c memory pool.
+	  Size the C library heap for the application and call mrbc_init()
+	  with NULL and zero. The mruby/c pool statistics API is unavailable.
+
+config MRUBYC_ALLOC_PROFILING
+	bool "Memory pool profiling"
+	depends on !MRUBYC_ALLOC_LIBC
+	help
+	  Enable the mrbc_alloc_*_profiling() API. While profiling is active,
+	  the allocator scans the pool on allocation and release.
 
 config MRUBYC_MAX_VM_COUNT
 	int "Maximum simultaneous VMs"
@@ -63,8 +78,24 @@ config MRUBYC_USE_UNICODE_CASE
 	help
 	  Enable Unicode Basic Multilingual Plane case conversion.
 
+config MRUBYC_STRING_SIZE_32BIT
+	bool "32-bit String length field"
+	help
+	  Store String lengths in uint32_t instead of uint16_t. Long
+	  strings also require a memory pool or C library heap large
+	  enough to hold their contents.
+
 config MRUBYC_INT64
 	bool "64-bit Ruby integers"
+
+config MRUBYC_NAN_BOXING
+	bool "NaN-boxed mruby/c values"
+	depends on MRUBYC_FLOAT_DOUBLE && !MRUBYC_INT64
+	select MRUBYC_DISABLE_LEGACY_VALUE_MACROS
+	help
+	  Use the upstream compact value representation on 32-bit GCC
+	  targets. This changes the mrbc_value layout used by C extensions
+	  and hides legacy C macros that depend on the regular layout.
 
 config MRUBYC_SUPPORT_OP_EXT
 	bool "Extended bytecode operands"
@@ -93,21 +124,67 @@ config MRUBYC_TASK_NAME_LEN
 	  Task names longer than this limit are truncated. The task control
 	  block also reserves one byte for the terminating NUL.
 
+config MRUBYC_KV_SIZE_INIT
+	int "Initial key-value table capacity"
+	range 1 64
+	default 2
+	help
+	  Number of entries reserved when an empty key-value table first
+	  needs storage, for example when setting an instance variable.
+
+config MRUBYC_KV_SIZE_INCREMENT
+	int "Key-value table growth increment"
+	range 1 64
+	default 5
+	help
+	  Number of extra entries to allocate when a key-value table fills.
+
+config MRUBYC_NO_STDIO
+	bool "Omit Ruby console methods"
+	help
+	  Omit p, print, puts, and printf. Keep sprintf for string formatting.
+	  The HAL can still write runtime diagnostics.
+
+config MRUBYC_CONVERT_CRLF
+	bool "Convert console line feeds to CRLF in mruby/c"
+	depends on !UART_CONSOLE
+	help
+	  Enable when the console expects CRLF and passes it through.
+	  Zephyr's UART console already inserts carriage returns.
+
+config MRUBYC_DEBUG_REGS
+	bool "Log VM register usage on exit"
+	help
+	  Print register usage when a VM finishes.
+
+config MRUBYC_DISABLE_LEGACY_VALUE_MACROS
+	bool "Omit legacy C value macros"
+	help
+	  Hide legacy C value macros such as GET_INT_ARG and MRBC_TO_INT.
+	  Use the mrbc_value accessors in C extensions.
+
+config MRUBYC_NO_TIMER
+	bool "Use software scheduler ticks"
+	help
+	  Advance ticks from the scheduler loop instead of a periodic
+	  Zephyr timer. Time slices count VM steps in this mode, and Ruby
+	  sleep intervals can vary with scheduler activity.
+
 config MRUBYC_TICK_UNIT_MS
 	int "mruby/c timer period in milliseconds"
 	range 1 10
 	default 1
 	help
-	  Sets the scheduling and Ruby sleep resolution. Choose a period
-	  that is an exact multiple of the Zephyr system clock tick.
+	  Sets the Ruby sleep resolution and the timer or idle sleep period.
+	  Choose an exact multiple of the Zephyr system clock tick.
 
 config MRUBYC_TIMESLICE_TICK_COUNT
 	int "Scheduler time slice in mruby/c ticks"
 	range 1 255
 	default 10
 	help
-	  Number of mruby/c ticks in a time slice. The time slice in
-	  milliseconds is this value times the mruby/c timer period.
+	  Number of mruby/c ticks in a time slice. With software ticks, this
+	  is the number of VM steps in a time slice.
 
 config MRUBYC_SCHEDULER_EXIT
 	bool "Return from mrbc_run() when tasks drain"

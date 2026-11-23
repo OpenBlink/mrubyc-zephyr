@@ -4,7 +4,7 @@
 
 Run Ruby bytecode in a Zephyr application using [mruby/c](https://github.com/mrubyc/mrubyc).
 The module builds mruby/c with a Zephyr HAL for scheduler timing and console output.
-Your application provides the memory pool and starts the Ruby tasks.
+Your application initializes the runtime and starts the Ruby tasks.
 
 | Module release | mruby/c release | Host compiler | Bytecode |
 | --- | --- | --- | --- |
@@ -100,10 +100,11 @@ int main(void)
 }
 ~~~
 
-`mrbc_init()` starts the HAL timer. Keep the pool and bytecode alive for the
-lifetime of the runtime, and access the VM from one Zephyr thread. Ruby tasks
-share that thread and are scheduled by mruby/c. With the default configuration,
-the scheduler returns when there are no runnable, waiting, or suspended tasks.
+`mrbc_init()` starts the HAL timer with the default settings. Keep the pool
+and bytecode alive for the lifetime of the runtime, and access the VM from
+one Zephyr thread. Ruby tasks share that thread and are scheduled by mruby/c.
+By default, the scheduler returns when there are no runnable, waiting, or
+suspended tasks.
 Size the pool and the Zephyr thread stack for your application.
 
 For build-time generation, include the helper after `find_package(Zephyr)`.
@@ -150,6 +151,8 @@ firmware.
 | Kconfig option | Default | Purpose |
 | --- | --- | --- |
 | `CONFIG_MRUBYC` | `n` | Build the module. |
+| `CONFIG_MRUBYC_ALLOC_LIBC` | `n` | Allocate VM objects from the C library heap. |
+| `CONFIG_MRUBYC_ALLOC_PROFILING` | `n` | Enable the pool allocator's `mrbc_alloc_*_profiling()` API. |
 | `CONFIG_MRUBYC_MAX_VM_COUNT` | `5` | Maximum number of VM instances. |
 | `CONFIG_MRUBYC_MAX_REGS_SIZE` | `110` | Default register capacity per VM. |
 | `CONFIG_MRUBYC_MAX_SYMBOLS_COUNT` | `255` | Dynamic symbol table capacity. |
@@ -158,27 +161,52 @@ firmware.
 | `CONFIG_MRUBYC_USE_MATH` | `n` | Enable the Math module with Float and a C library that provides its math functions. |
 | `CONFIG_MRUBYC_USE_STRING_UTF8` | `n` | Use UTF-8 character indexing in supported String methods. |
 | `CONFIG_MRUBYC_USE_UNICODE_CASE` | `n` | Add Unicode BMP case conversion when UTF-8 is enabled. |
+| `CONFIG_MRUBYC_STRING_SIZE_32BIT` | `n` | Use a 32-bit String length field. Available memory and individual String methods still constrain usable lengths. |
 | `CONFIG_MRUBYC_INT64` | `n` | Use 64-bit Ruby integers. |
+| `CONFIG_MRUBYC_NAN_BOXING` | `n` | Use the upstream compact value layout with GCC, double-precision Float, and 32-bit Integer. |
 | `CONFIG_MRUBYC_SUPPORT_OP_EXT` | `y` | Enable extended bytecode operands (`MRBC_SUPPORT_OP_EXT=1`). |
 | `CONFIG_MRUBYC_INSTANCE_DESTRUCTOR` | `y` | Allow C extensions to register instance destructor callbacks. |
 | `CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL` | `8` | Record up to this many call frames per exception (1–64). |
 | `CONFIG_MRUBYC_TASK_NAME_LEN` | `15` | Maximum task name length in bytes, excluding the terminating NUL (1–255). |
-| `CONFIG_MRUBYC_TICK_UNIT_MS` | `1` | Scheduler timer period in milliseconds (1–10). |
+| `CONFIG_MRUBYC_KV_SIZE_INIT` | `2` | Initial key-value table capacity (1–64). |
+| `CONFIG_MRUBYC_KV_SIZE_INCREMENT` | `5` | Entries added when a key-value table fills (1–64). |
+| `CONFIG_MRUBYC_NO_STDIO` | `n` | Omit Ruby `p`, `print`, `puts`, and `printf`. |
+| `CONFIG_MRUBYC_CONVERT_CRLF` | `n` | Convert LF to CRLF in mruby/c console output when Zephyr's UART console is disabled. |
+| `CONFIG_MRUBYC_DEBUG_REGS` | `n` | Print VM register usage when a VM finishes. |
+| `CONFIG_MRUBYC_DISABLE_LEGACY_VALUE_MACROS` | `n` | Omit legacy C value macros such as `GET_INT_ARG` and `MRBC_TO_INT`. Enabled automatically with NaN boxing. |
+| `CONFIG_MRUBYC_NO_TIMER` | `n` | Advance scheduler ticks in software. |
+| `CONFIG_MRUBYC_TICK_UNIT_MS` | `1` | Timer or idle sleep period in milliseconds (1–10). |
 | `CONFIG_MRUBYC_TIMESLICE_TICK_COUNT` | `10` | Scheduler time slice in mruby/c ticks (1–255). |
 | `CONFIG_MRUBYC_SCHEDULER_EXIT` | `y` | Return from `mrbc_run()` when active tasks drain. When disabled, the scheduler stays idle in its Zephyr thread. |
 
 Extended operands are enabled by default. The other runtime options use
-mruby/c and Zephyr HAL defaults. The bundled release requires Float and String
-support. The module uses the upstream pool allocator and periodic Zephyr timer.
-The Zephyr console backend handles line endings, and the target determines
-alignment requirements.
+mruby/c and Zephyr HAL defaults, including the pool allocator and the periodic
+Zephyr timer.
 
-A time slice is the timer period multiplied by the tick count. Ruby sleeps
-have the resolution of the configured timer period. If you disable destructor
-callbacks, `mrbc_define_destructor()` is unavailable and the class layout
-changes. Use Kconfig to keep the application and runtime headers in sync. Link
-additional Zephyr libraries that include `mrubyc.h` with
-`zephyr_library_link_libraries(MRUBYC_API)`.
+- With the C library allocator, size the libc heap for the application and
+  initialize the runtime once with `mrbc_init(NULL, 0)`. In this mode
+  `mrbc_cleanup()` does not reclaim persistent allocations such as dynamic
+  symbols. The mruby/c pool statistics and profiling APIs are unavailable.
+- With the periodic timer, the time slice is the period multiplied by the
+  tick count. With software ticks, the time slice counts VM steps and Ruby
+  sleep intervals can vary with scheduler activity. Use a period that is an
+  exact multiple of the Zephyr system clock tick.
+- The sample scripts use `puts`. Update scripts that call console methods
+  before omitting those methods. Enable CRLF conversion only when the console
+  backend passes line feeds through.
+- The NaN-boxing, String length, and destructor settings affect C layouts.
+  Disabling destructors also removes `mrbc_define_destructor()`. Use Kconfig to
+  keep the application and runtime headers in sync. Link additional Zephyr
+  libraries that include `mrubyc.h` with
+  `zephyr_library_link_libraries(MRUBYC_API)`.
+
+The official 4.0.0 sources require Float and String support with this
+integration. The upstream 16-bit integer mode breaks variadic integer
+formatting, 16-bit pool headers can misalign objects on 32-bit targets, and the
+VM-ID allocator mode fails to compile. The pool's layout parameters stay at
+their upstream defaults, debug code follows the compiler's `NDEBUG`, and
+fatal-error hooks remain C macros. The module targets little-endian boards and
+derives bytecode alignment requirements from the Zephyr configuration.
 
 ## Tests and contributions
 

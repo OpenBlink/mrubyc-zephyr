@@ -21,6 +21,10 @@ BUILD_ASSERT(MRBC_USE_UNICODE_CASE == IS_ENABLED(CONFIG_MRUBYC_USE_UNICODE_CASE)
 BUILD_ASSERT(MRBC_INSTANCE_DESTRUCTOR == IS_ENABLED(CONFIG_MRUBYC_INSTANCE_DESTRUCTOR));
 BUILD_ASSERT(MRBC_EXCEPTION_CALL_NEST_LEVEL == CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL);
 BUILD_ASSERT(MRBC_TASK_NAME_LEN == CONFIG_MRUBYC_TASK_NAME_LEN);
+BUILD_ASSERT(MRBC_KV_SIZE_INIT == CONFIG_MRUBYC_KV_SIZE_INIT);
+BUILD_ASSERT(MRBC_KV_SIZE_INCREMENT == CONFIG_MRUBYC_KV_SIZE_INCREMENT);
+BUILD_ASSERT(sizeof(MRBC_STRING_SIZE_T) ==
+	     (IS_ENABLED(CONFIG_MRUBYC_STRING_SIZE_32BIT) ? sizeof(uint32_t) : sizeof(uint16_t)));
 BUILD_ASSERT(MRBC_TICK_UNIT == CONFIG_MRUBYC_TICK_UNIT_MS);
 BUILD_ASSERT(MRBC_TIMESLICE_TICK_COUNT == CONFIG_MRUBYC_TIMESLICE_TICK_COUNT);
 BUILD_ASSERT(MRBC_SCHEDULER_EXIT == IS_ENABLED(CONFIG_MRUBYC_SCHEDULER_EXIT));
@@ -33,6 +37,20 @@ BUILD_ASSERT(MRBC_SCHEDULER_EXIT == IS_ENABLED(CONFIG_MRUBYC_SCHEDULER_EXIT));
 #if defined(MRBC_SUPPORT_OP_EXT) != defined(CONFIG_MRUBYC_SUPPORT_OP_EXT)
 #error "The application and mruby/c disagree on extended operands"
 #endif
+#if defined(MRBC_ALLOC_LIBC) != defined(CONFIG_MRUBYC_ALLOC_LIBC) || \
+	defined(MRBC_USE_ALLOC_PROF) != defined(CONFIG_MRUBYC_ALLOC_PROFILING) || \
+	defined(MRBC_NAN_BOXING) != defined(CONFIG_MRUBYC_NAN_BOXING)
+#error "The application and mruby/c disagree on memory configuration"
+#endif
+#if defined(MRBC_NO_STDIO) != defined(CONFIG_MRUBYC_NO_STDIO) || \
+	defined(MRBC_CONVERT_CRLF) != defined(CONFIG_MRUBYC_CONVERT_CRLF) || \
+	defined(MRBC_DEBUG_REGS) != defined(CONFIG_MRUBYC_DEBUG_REGS) || \
+	defined(MRBC_NO_TIMER) != defined(CONFIG_MRUBYC_NO_TIMER)
+#error "The application and mruby/c disagree on HAL or diagnostics configuration"
+#endif
+#if defined(GET_INT_ARG) == defined(CONFIG_MRUBYC_DISABLE_LEGACY_VALUE_MACROS)
+#error "The legacy value macros must follow Kconfig"
+#endif
 
 #if defined(EXPECT_DEFAULTS)
 BUILD_ASSERT(MAX_VM_COUNT == 5 && MAX_REGS_SIZE == 110 && MAX_SYMBOLS_COUNT == 255);
@@ -43,12 +61,25 @@ BUILD_ASSERT(MRBC_EXCEPTION_CALL_NEST_LEVEL == 8 && MRBC_TASK_NAME_LEN == 15);
 BUILD_ASSERT(MRBC_TICK_UNIT == 1 && MRBC_TIMESLICE_TICK_COUNT == 10);
 BUILD_ASSERT(MRBC_SCHEDULER_EXIT == 1 && !IS_ENABLED(CONFIG_MRUBYC_SYMBOL_SEARCH_LINEAR));
 BUILD_ASSERT(MRBC_SUPPORT_OP_EXT == 1);
-#if defined(MRBC_INT64)
-#error "64-bit Ruby integers must be opt-in"
+BUILD_ASSERT(MRBC_KV_SIZE_INIT == 2 && MRBC_KV_SIZE_INCREMENT == 5);
+BUILD_ASSERT(sizeof(MRBC_STRING_SIZE_T) == sizeof(uint16_t));
+#if defined(MRBC_INT64) || defined(MRBC_ALLOC_LIBC) || defined(MRBC_USE_ALLOC_PROF) || \
+	defined(MRBC_NAN_BOXING) || defined(MRBC_NO_STDIO) || defined(MRBC_CONVERT_CRLF) || \
+	defined(MRBC_DEBUG_REGS) || defined(MRBC_NO_TIMER) || !defined(GET_INT_ARG)
+#error "Unexpected upstream defaults"
 #endif
 #endif
 
-static _Alignas(8) uint8_t pool[32 * 1024];
+static void init_runtime(void)
+{
+#ifdef CONFIG_MRUBYC_ALLOC_LIBC
+	mrbc_init(NULL, 0);
+#else
+	static _Alignas(8) uint8_t pool[32 * 1024];
+
+	mrbc_init(pool, sizeof(pool));
+#endif
+}
 
 static void check_timer_result(void)
 {
@@ -81,18 +112,84 @@ static void check_instance_release(void)
 	mrbc_value instance = mrbc_instance_new(NULL, cls, 0);
 
 	zassert_equal(mrbc_type(instance), MRBC_TT_OBJECT);
+
+	/* Insert distinct dynamic symbols and check lookups after the table grows. */
+	for (int i = 0; i <= MRBC_KV_SIZE_INIT; i++) {
+		char name[24];
+
+		snprintk(name, sizeof(name), "probe_ivar_%d", i);
+		mrbc_value symbol = mrbc_symbol_new(NULL, name);
+		mrbc_value value = mrbc_integer_value(i);
+
+		zassert_equal(mrbc_type(symbol), MRBC_TT_SYMBOL);
+		mrbc_instance_setiv(&instance, mrbc_symbol(symbol), &value);
+	}
+	zassert_equal(instance.instance->ivar.data_size,
+		      MRBC_KV_SIZE_INIT + MRBC_KV_SIZE_INCREMENT);
+
+	for (int i = MRBC_KV_SIZE_INIT; i >= 0; i--) {
+		char name[24];
+
+		snprintk(name, sizeof(name), "probe_ivar_%d", i);
+		mrbc_sym id = mrbc_search_symid(name);
+
+		zassert_true(id >= 0);
+		zassert_str_equal(mrbc_symid_to_str(id), name);
+		zassert_equal(mrbc_str_to_symid(name), id);
+		mrbc_value value = mrbc_instance_getiv(&instance, id);
+
+		zassert_equal(mrbc_type(value), MRBC_TT_INTEGER);
+		zassert_equal(mrbc_integer(value), i);
+	}
+
 	mrbc_decref(&instance);
 #if MRBC_INSTANCE_DESTRUCTOR
 	zassert_equal(destructor_calls, 1);
 #endif
 }
 
+static void check_optional_features(void)
+{
+	static const char *const console_methods[] = {"p", "print", "puts", "printf"};
+	mrbc_method method;
+
+	for (size_t i = 0; i < ARRAY_SIZE(console_methods); i++) {
+		mrbc_sym id = mrbc_search_symid(console_methods[i]);
+
+		zassert_equal(id >= 0 && mrbc_find_method(&method, MRBC_CLASS(Object), id) != NULL,
+			      !IS_ENABLED(CONFIG_MRUBYC_NO_STDIO), "%s", console_methods[i]);
+	}
+
+#if defined(CONFIG_MRUBYC_ALLOC_PROFILING)
+	struct MRBC_ALLOC_PROF profile;
+
+	mrbc_alloc_start_profiling();
+	void *block = mrbc_raw_alloc(128);
+
+	zassert_not_null(block);
+	mrbc_raw_free(block);
+	mrbc_alloc_stop_profiling();
+	mrbc_alloc_get_profiling(&profile);
+	zassert_true(profile.max >= profile.initial + 128);
+	zassert_equal(profile.min, profile.initial);
+#endif
+
+#if defined(CONFIG_BOARD_NATIVE_SIM) && defined(CONFIG_MRUBYC_ALLOC_LIBC) && \
+	defined(CONFIG_MRUBYC_STRING_SIZE_32BIT)
+	mrbc_value string = mrbc_string_new(NULL, NULL, UINT16_MAX + 1);
+
+	zassert_equal(mrbc_string_size(&string), UINT16_MAX + 1);
+	mrbc_decref(&string);
+#endif
+}
+
 ZTEST(mrubyc, test_loader_timer_and_extended_operands)
 {
-	mrbc_init(pool, sizeof(pool));
+	init_runtime();
 	zassert_is_null(mrbc_create_task(rite0300_mrb, NULL),
 			"The RITE0400 runtime must reject bytecode from v3.4.1");
 	check_instance_release();
+	check_optional_features();
 
 	mrbc_tcb *task = mrbc_create_task(timer_mrb, NULL);
 	static const char task_name[] = "integration-task-with-a-long-name";
@@ -110,6 +207,12 @@ ZTEST(mrubyc, test_loader_timer_and_extended_operands)
 
 	check_timer_result();
 	zassert_true(elapsed >= 20 && elapsed < 200, "sleep_ms took %lld ms", (long long)elapsed);
+
+	const mrbc_value *float_result = mrbc_get_global(mrbc_search_symid("$float_result"));
+
+	zassert_not_null(float_result);
+	zassert_equal(mrbc_type(*float_result), MRBC_TT_FLOAT);
+	zassert_true(mrbc_float(*float_result) == (mrbc_float_t)3.25);
 
 	const mrbc_value *error = mrbc_get_global(mrbc_search_symid("$trace_result"));
 
@@ -147,7 +250,7 @@ static void run_scheduler(void *unused1, void *unused2, void *unused3)
 	ARG_UNUSED(unused2);
 	ARG_UNUSED(unused3);
 
-	mrbc_init(pool, sizeof(pool));
+	init_runtime();
 	if (mrbc_create_task(timer_mrb, NULL) != NULL) {
 		mrbc_run();
 	}
