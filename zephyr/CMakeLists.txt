@@ -32,6 +32,13 @@ target_compile_definitions(MRUBYC_API INTERFACE
   $<$<BOOL:${CONFIG_MRUBYC_INT64}>:MRBC_INT64=1>
   $<$<BOOL:${CONFIG_MRUBYC_SUPPORT_OP_EXT}>:MRBC_SUPPORT_OP_EXT=1>
 )
+# RITE bytecode can contain halfwords and words at unaligned offsets.
+if(CONFIG_ARMV6_M_ARMV8_M_BASELINE OR CONFIG_TRAP_UNALIGNED_ACCESS)
+  target_compile_definitions(MRUBYC_API INTERFACE MRBC_REQUIRE_32BIT_ALIGNMENT)
+endif()
+if(CONFIG_TRAP_UNALIGNED_ACCESS)
+  target_compile_options(MRUBYC_API INTERFACE -mno-unaligned-access)
+endif()
 # The native simulator runner already links libm in its final link step.
 if(CONFIG_MRUBYC_USE_MATH AND CONFIG_NATIVE_LIBC AND NOT CONFIG_NATIVE_LIBRARY)
   target_link_libraries(MRUBYC_API INTERFACE m)

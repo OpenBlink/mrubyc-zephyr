@@ -9,6 +9,10 @@ tests:
   mrubyc.integration.no_op_ext:
     extra_configs:
       - CONFIG_MRUBYC_SUPPORT_OP_EXT=n
+  mrubyc.integration.trap_unaligned:
+    platform_allow: qemu_cortex_m3
+    extra_configs:
+      - CONFIG_TRAP_UNALIGNED_ACCESS=y
   mrubyc.integration.custom:
     extra_configs:
       - CONFIG_MRUBYC_MAX_VM_COUNT=3
