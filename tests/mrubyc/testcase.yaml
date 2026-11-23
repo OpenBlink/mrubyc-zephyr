@@ -25,3 +25,13 @@ tests:
       - CONFIG_MRUBYC_INT64=y
       - CONFIG_MRUBYC_USE_STRING_UTF8=y
       - CONFIG_MRUBYC_USE_UNICODE_CASE=y
+      - CONFIG_MRUBYC_SYMBOL_SEARCH_LINEAR=y
+      - CONFIG_MRUBYC_INSTANCE_DESTRUCTOR=n
+      - CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL=1
+      - CONFIG_MRUBYC_TASK_NAME_LEN=24
+      - CONFIG_MRUBYC_TICK_UNIT_MS=4
+      - CONFIG_MRUBYC_TIMESLICE_TICK_COUNT=3
+  mrubyc.integration.scheduler_idle:
+    platform_allow: [native_sim, qemu_cortex_m3]
+    extra_configs:
+      - CONFIG_MRUBYC_SCHEDULER_EXIT=n

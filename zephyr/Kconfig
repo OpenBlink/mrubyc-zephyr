@@ -28,6 +28,12 @@ config MRUBYC_MAX_SYMBOLS_COUNT
 	range 32 32512
 	default 255
 
+config MRUBYC_SYMBOL_SEARCH_LINEAR
+	bool "Use linear search for dynamic symbols"
+	help
+	  Use linear search instead of the default binary tree. This saves
+	  table storage, with slower lookups as the table grows.
+
 choice MRUBYC_FLOAT
 	prompt "Ruby Float representation"
 	default MRUBYC_FLOAT_DOUBLE
@@ -63,5 +69,51 @@ config MRUBYC_INT64
 config MRUBYC_SUPPORT_OP_EXT
 	bool "Extended bytecode operands"
 	default y
+
+config MRUBYC_INSTANCE_DESTRUCTOR
+	bool "C instance destructor callbacks"
+	default y
+	help
+	  Allow extensions to register instance destructors through
+	  mrbc_define_destructor(). Disabling this changes the class layout
+	  and removes the registration API.
+
+config MRUBYC_EXCEPTION_CALL_NEST_LEVEL
+	int "Maximum recorded exception frames"
+	range 1 64
+	default 8
+	help
+	  Number of call frames stored per exception for diagnostic output.
+
+config MRUBYC_TASK_NAME_LEN
+	int "Maximum task name length in bytes"
+	range 1 255
+	default 15
+	help
+	  Task names longer than this limit are truncated. The task control
+	  block also reserves one byte for the terminating NUL.
+
+config MRUBYC_TICK_UNIT_MS
+	int "mruby/c timer period in milliseconds"
+	range 1 10
+	default 1
+	help
+	  Sets the scheduling and Ruby sleep resolution. Choose a period
+	  that is an exact multiple of the Zephyr system clock tick.
+
+config MRUBYC_TIMESLICE_TICK_COUNT
+	int "Scheduler time slice in mruby/c ticks"
+	range 1 255
+	default 10
+	help
+	  Number of mruby/c ticks in a time slice. The time slice in
+	  milliseconds is this value times the mruby/c timer period.
+
+config MRUBYC_SCHEDULER_EXIT
+	bool "Return from mrbc_run() when tasks drain"
+	default y
+	help
+	  Return when there are no runnable, waiting, or suspended Ruby
+	  tasks. Disable to keep the scheduler thread idle in that state.
 
 endif # MRUBYC

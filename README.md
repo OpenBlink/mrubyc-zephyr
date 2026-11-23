@@ -58,9 +58,10 @@ CONFIG_PRINTK=y
 CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000
 ~~~
 
-`CONFIG_PRINTK` enables Ruby console output. Set the system clock rate so one
-millisecond is an integer number of Zephyr ticks. With a coarser clock, Zephyr
-rounds up each mruby/c timer period, so Ruby sleep and scheduling take longer.
+`CONFIG_PRINTK` enables Ruby console output. Set the system clock rate so the
+configured mruby/c timer period is an integer number of Zephyr ticks. With a
+coarser clock, Zephyr rounds up the period, so Ruby sleep and scheduling take
+longer.
 
 ## Run your own Ruby code
 
@@ -101,10 +102,9 @@ int main(void)
 
 `mrbc_init()` starts the HAL timer. Keep the pool and bytecode alive for the
 lifetime of the runtime, and access the VM from one Zephyr thread. Ruby tasks
-share that thread and are scheduled by mruby/c. The scheduler returns when
-there are no runnable, waiting, or suspended tasks. Size the pool and the
-Zephyr thread stack for your application. Use bytecode built from sources you
-trust and recompile those sources when changing bytecode versions.
+share that thread and are scheduled by mruby/c. With the default configuration,
+the scheduler returns when there are no runnable, waiting, or suspended tasks.
+Size the pool and the Zephyr thread stack for your application.
 
 For build-time generation, include the helper after `find_package(Zephyr)`.
 If needed, pass `-DMRUBYC_MRBC=/absolute/path/to/mrbc` to CMake.
@@ -130,6 +130,21 @@ Use a distinct C identifier for each bytecode array linked into your application
 To return to v3.4.1, pin that revision and regenerate the application
 bytecode with mrbc 3.4.0 before rebuilding.
 
+## Known limitations
+
+Build and embed bytecode from trusted sources. The bundled upstream runtime
+contains [CVE-2026-86547](https://www.cve.org/CVERecord?id=CVE-2026-86547).
+Malformed bytecode can crash the VM. Keep externally supplied bytecode out of
+the runtime, even if it has the expected RITE version.
+
+In upstream 4.0.0, method arguments can be lost inside `ensure` when returning
+from a method. The default integer configuration can also reject a literal
+`-2147483648` compiled by mrbc 4.0.0. Qualification also found incorrect
+results with overloaded `+=` and `-=`, mixed-type Integer addition and
+subtraction, and Array slices with extreme Range endpoints. Exercise
+application scripts with the compiler and Kconfig settings used in the
+firmware.
+
 ## Configuration
 
 | Kconfig option | Default | Purpose |
@@ -138,18 +153,31 @@ bytecode with mrbc 3.4.0 before rebuilding.
 | `CONFIG_MRUBYC_MAX_VM_COUNT` | `5` | Maximum number of VM instances. |
 | `CONFIG_MRUBYC_MAX_REGS_SIZE` | `110` | Default register capacity per VM. |
 | `CONFIG_MRUBYC_MAX_SYMBOLS_COUNT` | `255` | Dynamic symbol table capacity. |
+| `CONFIG_MRUBYC_SYMBOL_SEARCH_LINEAR` | `n` | Use a smaller linear lookup table for dynamic symbols. The default uses a binary tree. |
 | `CONFIG_MRUBYC_FLOAT_{SINGLE,DOUBLE}` | `DOUBLE` | Float representation. |
 | `CONFIG_MRUBYC_USE_MATH` | `n` | Enable the Math module with Float and a C library that provides its math functions. |
 | `CONFIG_MRUBYC_USE_STRING_UTF8` | `n` | Use UTF-8 character indexing in supported String methods. |
 | `CONFIG_MRUBYC_USE_UNICODE_CASE` | `n` | Add Unicode BMP case conversion when UTF-8 is enabled. |
 | `CONFIG_MRUBYC_INT64` | `n` | Use 64-bit Ruby integers. |
 | `CONFIG_MRUBYC_SUPPORT_OP_EXT` | `y` | Enable extended bytecode operands (`MRBC_SUPPORT_OP_EXT=1`). |
+| `CONFIG_MRUBYC_INSTANCE_DESTRUCTOR` | `y` | Allow C extensions to register instance destructor callbacks. |
+| `CONFIG_MRUBYC_EXCEPTION_CALL_NEST_LEVEL` | `8` | Record up to this many call frames per exception (1–64). |
+| `CONFIG_MRUBYC_TASK_NAME_LEN` | `15` | Maximum task name length in bytes, excluding the terminating NUL (1–255). |
+| `CONFIG_MRUBYC_TICK_UNIT_MS` | `1` | Scheduler timer period in milliseconds (1–10). |
+| `CONFIG_MRUBYC_TIMESLICE_TICK_COUNT` | `10` | Scheduler time slice in mruby/c ticks (1–255). |
+| `CONFIG_MRUBYC_SCHEDULER_EXIT` | `y` | Return from `mrbc_run()` when active tasks drain. When disabled, the scheduler stays idle in its Zephyr thread. |
 
 Extended operands are enabled by default. The other runtime options use
-mruby/c defaults. The bundled release requires Float and String support.
-The HAL uses a 1 ms scheduler tick and 10 ticks per time
-slice. Use the Kconfig options to keep the application and runtime headers
-in sync. Link additional Zephyr libraries that include `mrubyc.h` with
+mruby/c and Zephyr HAL defaults. The bundled release requires Float and String
+support. The module uses the upstream pool allocator and periodic Zephyr timer.
+The Zephyr console backend handles line endings, and the target determines
+alignment requirements.
+
+A time slice is the timer period multiplied by the tick count. Ruby sleeps
+have the resolution of the configured timer period. If you disable destructor
+callbacks, `mrbc_define_destructor()` is unavailable and the class layout
+changes. Use Kconfig to keep the application and runtime headers in sync. Link
+additional Zephyr libraries that include `mrubyc.h` with
 `zephyr_library_link_libraries(MRUBYC_API)`.
 
 ## Tests and contributions
