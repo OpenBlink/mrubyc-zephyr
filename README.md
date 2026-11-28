@@ -360,6 +360,10 @@ only the `v*` deployment tag policy. After approval, the workflow rechecks the
 policy and publishes the GitHub Release automatically. If a Release already
 exists for the tag, the workflow stops without changing it.
 
+If an interrupted run left a GitHub Release, verify that it is an unpublished
+draft for the same tag and contains none of the expected release assets, if
+any. Delete only that draft, keeping the Git tag, then use **Re-run failed jobs**.
+
 ## License
 
 The integration is distributed under the [BSD 3-Clause License](LICENSE).
