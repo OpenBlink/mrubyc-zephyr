@@ -28,7 +28,13 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Verify the tag matches the runtime and main
+      - name: Verify the tag and production policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/validate_release.sh
+      - name: Test release policy
+        run: bash .github/scripts/test_release_policy.sh
+      - name: Verify the tag matches the runtime
         run: |
           tag="$GITHUB_REF_NAME"
           version=$(sed -nE 's/^MRUBYC_VERSION[[:blank:]]*=[[:blank:]]*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' vendor/mrubyc/src/VERSION)
@@ -36,19 +42,6 @@ jobs:
             echo "::error::The release tag must match the bundled MRUBYC_VERSION (v$version)"
             exit 1
           fi
-          git merge-base --is-ancestor HEAD origin/main
-      - name: Verify production requires approval and allows release tags
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          endpoint="repos/$GITHUB_REPOSITORY/environments/production"
-          gh api "$endpoint" | jq -e '
-            .deployment_branch_policy.custom_branch_policies and
-            any(.protection_rules[]; .type == "required_reviewers" and (.reviewers | length > 0))
-          '
-          gh api "$endpoint/deployment-branch-policies" | jq -e '
-            any(.branch_policies[]; .name == "v*" and .type == "tag")
-          '
 
   test:
     needs: validate
@@ -60,10 +53,17 @@ jobs:
     timeout-minutes: 5
     environment: production
     permissions:
+      actions: read
       contents: write
     steps:
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
-        # zizmor: ignore[superfluous-actions] keep generated release notes and existing release behavior
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          generate_release_notes: true
+          persist-credentials: false
+      - name: Recheck production policy and require a new Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/validate_release.sh --publish-check
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes

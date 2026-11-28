@@ -352,10 +352,19 @@ For a bug report, include the Zephyr revision, board, module tag, and
 configuration. Include the `mrbc --version` output when reporting a
 bytecode issue.
 
-Release tags run the test suite in GitHub Actions. A maintainer approves the
-publish job in the `production` environment before the GitHub Release is created.
-Configure `production` with required reviewers and a `v*` deployment tag policy
-before pushing a release tag.
+Once the release commit is on `main` and its CI is green, push an unsigned
+`vX.Y.Z` tag matching `vendor/mrubyc/src/VERSION`. GitHub Actions verifies
+the tag and runs the test suite before requesting approval. The `production`
+environment must have required reviewers, administrator bypass disabled, and
+only the `v*` deployment tag policy. After approval, the workflow rechecks the
+policy and publishes the GitHub Release automatically. If a Release already
+exists for the tag, the workflow stops without changing it.
+
+If the GitHub Release for the tag is still a draft, delete the draft even if
+it already contains some assets. Keep the Git tag and use **Re-run failed jobs**.
+If the Release is already published, do not modify it or rerun the failed
+publication job. Verify the release assets and any published checksums. If
+the Release is broken, publish a new patch version.
 
 ## License
 
